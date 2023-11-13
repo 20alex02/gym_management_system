@@ -237,3 +237,16 @@ func scanRow[T any](row *sql.Row, target *T) error {
 	columns := createColumns(target)
 	return row.Scan(columns...)
 }
+
+func commitOrRollback(tx *sql.Tx, err *error) {
+	if *err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			log.Println(rollbackErr)
+		}
+		return
+	}
+	if commitErr := tx.Commit(); commitErr != nil {
+		log.Println(commitErr)
+		*err = commitErr
+	}
+}

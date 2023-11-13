@@ -25,13 +25,13 @@ func main() {
 	}
 	fmt.Println("done")
 	member := db.Account{FirstName: "alex", LastName: "popovic", Email: "alexxx.popovic@gmail.com", EncryptedPassword: "asdf"}
-	if err := store.CreateAccount(&member); err != nil {
+	if _, err := store.CreateAccount(&member); err != nil {
 		log.Fatal(err)
 	}
 	member.Email = "john@doe.com"
 	member.FirstName = "john"
 	member.LastName = "doe"
-	if err := store.CreateAccount(&member); err != nil {
+	if _, err := store.CreateAccount(&member); err != nil {
 		log.Fatal(err)
 	}
 	accounts, err := store.GetAllAccounts()
