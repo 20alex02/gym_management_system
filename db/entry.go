@@ -1,7 +1,7 @@
 package db
 
 type EntryRepository interface {
-	CreateEntry(e *Entry) (*Entry, error)
+	CreateEntry(e *Entry) (int, error)
 	GetEntryById(id int) (*Entry, error)
 	GetAllEntriesByAccountId(id int) (*[]Entry, error)
 	DeleteEntry(id int) error
@@ -15,30 +15,29 @@ func getMembershipId(m *Membership) interface{} {
 }
 
 // TODO
-func (s *PostgresStore) CreateEntry(e *Entry) (*Entry, error) {
-	//tx, err := s.Db.Begin()
-	//if err != nil {
-	//	return nil, err
+func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
+	//tx, errors := s.Db.Begin()
+	//if errors != nil {
+	//	return nil, errors
 	//}
-	//defer commitOrRollback(tx, &err)
+	//defer commitOrRollback(tx, &errors)
 
 	query := `insert into entry (
                    account_id,
                    event_id,
                    membership_id
-	) values ($1, $2, $3)`
+	) values ($1, $2, $3) returning id`
 
-	row := s.Db.QueryRow(
+	var id int
+	err := s.Db.QueryRow(
 		query,
 		e.Account.Id,
 		e.Event.Id,
-		getMembershipId(e.Membership))
-
-	entry := &Entry{}
-	if err := scanRow(row, entry); err != nil {
-		return nil, err
+		getMembershipId(e.Membership)).Scan(&id)
+	if err != nil {
+		return 0, err
 	}
-	return entry, nil
+	return id, nil
 }
 
 func (s *PostgresStore) GetEntryById(id int) (*Entry, error) {

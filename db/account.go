@@ -1,35 +1,34 @@
 package db
 
 type AccountRepository interface {
-	CreateAccount(a *Account) (*Account, error)
-	GetAccountByID(id int) (*Account, error)
+	CreateAccount(a *Account) (int, error)
+	GetAccountById(id int) (*Account, error)
 	GetAllAccounts() (*[]Account, error)
 	UpdateAccount(a *Account) error
 	DeleteAccount(id int) error
 }
 
-func (s *PostgresStore) CreateAccount(a *Account) (*Account, error) {
+func (s *PostgresStore) CreateAccount(a *Account) (int, error) {
 	query := `insert into account (
 		first_name,
 		last_name, 
 		encrypted_password,
 		email,
 		credit
-	) values ($1, $2, $3, $4, $5)`
+	) values ($1, $2, $3, $4, $5) returning id`
 
-	row := s.Db.QueryRow(
+	var id int
+	err := s.Db.QueryRow(
 		query,
 		a.FirstName,
 		a.LastName,
 		a.EncryptedPassword,
 		a.Email,
-		a.Credit)
-
-	account := &Account{}
-	if err := scanRow(row, account); err != nil {
-		return nil, err
+		a.Credit).Scan(&id)
+	if err != nil {
+		return 0, err
 	}
-	return account, nil
+	return id, nil
 }
 
 func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
@@ -43,7 +42,7 @@ func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
 }
 
 func (s *PostgresStore) GetAllAccounts() (*[]Account, error) {
-	query := `select * from account`
+	query := `select * from account where deleted_at is null`
 	rows, err := s.Db.Query(query)
 	if err != nil {
 		return nil, err
@@ -68,5 +67,22 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
                    credit = $5
                where id = $6`
 	_, err := s.Db.Exec(query, a.FirstName, a.LastName, a.EncryptedPassword, a.Email, a.Credit)
+	return err
+}
+
+func (s *PostgresStore) DeleteAccount(id int) error {
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrRollback(tx, &err)
+
+	query := `select deleted_at from account where id = $1`
+	err = checkDeleted(tx, id, query)
+	if err != nil {
+		return err
+	}
+	query = `update account set deleted_at = current_timestamp where id = $1`
+	_, err = tx.Exec(query, id)
 	return err
 }

@@ -1,12 +1,12 @@
 package db
 
 type MembershipRepository interface {
-	CreateMembership(m *Membership) (*Membership, error)
+	CreateMembership(m *Membership) (int, error)
 	GetAllMembershipsByAccountId(id int) (*[]Membership, error)
 	GetMembershipById(id int) (*Membership, error)
 }
 
-func (s *PostgresStore) CreateMembership(m *Membership) (*Membership, error) {
+func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
 	query := `insert into membership (
 						type,
 						valid_from, 
@@ -14,22 +14,21 @@ func (s *PostgresStore) CreateMembership(m *Membership) (*Membership, error) {
 						entries_left,
 						price,
 						account_id
-	) values ($1, $2, $3, $4, $5, $6)`
+	) values ($1, $2, $3, $4, $5, $6) returning id`
 
-	row := s.Db.QueryRow(
+	var id int
+	err := s.Db.QueryRow(
 		query,
 		m.Type,
 		m.ValidFrom,
 		m.ValidTo,
 		m.EntriesLeft,
 		m.Price,
-		m.Account.Id)
-
-	membership := &Membership{}
-	if err := scanRow(row, membership); err != nil {
-		return nil, err
+		m.Account.Id).Scan(&id)
+	if err != nil {
+		return 0, err
 	}
-	return membership, nil
+	return id, nil
 }
 
 func (s *PostgresStore) GetAllMembershipsByAccountId(id int) (*[]Membership, error) {
