@@ -19,12 +19,22 @@ PACKAGE "Gym Management System" {
 
     ENTITY Membership {
         +membership_id: int (PK)
-        -user_id: int (FK)
         type: EventType
+        duration_days: int
+        entries: int
+        price: int
+
+        created_at: datetime
+        deleted_at: datetime
+    }
+
+    ENTITY UserMembership {
+        +user_membership_id: int (PK)
+        -user_id: int (FK)
+        -membership_id: int (FK)
         valid_from: datetime
         valid_to: datetime
-        entries_left: int
-        price: int
+        entries: int
 
         created_at: datetime
         deleted_at: datetime
@@ -59,11 +69,11 @@ PACKAGE "Gym Management System" {
         all
     }
 
-    User "1"--"n" Entry : Makes
-    Event "1"--"n" Entry : Has
-    Membership "1"--"n" Entry : Paid By
-
-    User "1"--"n" Membership : Has
+    User "1"--"n" Entry : > Makes
+    Event "1"--"n" Entry : > Has
+    UserMembership "1"--"n" Entry : < Paid By
+    UserMembership "n"--"1" Membership : > is instance of
+    User "1"--"n" UserMembership : > Has
 }
 
 @enduml

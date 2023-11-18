@@ -1,11 +1,9 @@
 package db
 
-import (
-	"time"
-)
+import "time"
 
 func (s *PostgresStore) Seed() error {
-	tables := []string{"entry", "membership", "account", "event"}
+	tables := []string{"entry", "account_membership", "membership", "account", "event"}
 	var err error
 	if err = s.cleanup(tables); err != nil {
 		return err
@@ -23,6 +21,9 @@ func (s *PostgresStore) Seed() error {
 	if err = s.createMembershipTable(); err != nil {
 		return err
 	}
+	if err = s.createAccountMembershipTable(); err != nil {
+		return err
+	}
 	if err = s.createEntryTable(); err != nil {
 		return err
 	}
@@ -32,37 +33,42 @@ func (s *PostgresStore) Seed() error {
 		{2, "jack", "johnson", "ashfsaf", "jj@mail.com", 0, time.Now(), nil},
 		{3, "john", "jackson", "lengogn", "johnJ@mail.com", 0, time.Now(), nil},
 	}
-	event := Event{0, OPEN_GYM, "open", time.Now(), time.Now().Add(time.Hour), 10, 100, time.Now(), nil}
-	membership := Membership{0, ALL, time.Now().AddDate(0, 0, -1), time.Now().AddDate(0, 1, 0), 30, 1500, &accounts[0], time.Now(), nil}
+	event := Event{1, OPEN_GYM, "open", time.Now(), time.Now().Add(time.Hour), 10, 100, time.Now(), nil}
+	memberships := []Membership{
+		{1, OPEN_GYM, 30, 30, 1000, time.Now(), nil},
+		{2, LECTURE, 30, 30, 1500, time.Now(), nil},
+		{3, ALL, 30, 30, 2000, time.Now(), nil},
+	}
+	accountMembership := AccountMembership{1, 1, 3, time.Now(), time.Now().AddDate(0, 1, 0), 30, time.Now(), nil}
 	for _, account := range accounts {
 		if _, err := s.CreateAccount(&account); err != nil {
 			return err
 		}
 	}
-	//acc, errors := s.GetAllAccounts()
-	//if errors != nil {
-	//	return errors
-	//}
-	//fmt.Println(acc)
-	_, err = s.CreateEvent(&event)
-	if err != nil {
+	if _, err = s.CreateEvent(&event); err != nil {
 		return err
 	}
-	_, err = s.CreateMembership(&membership)
-	if err != nil {
+	for _, membership := range memberships {
+		if _, err = s.CreateMembership(&membership); err != nil {
+			return err
+		}
+	}
+
+	if _, err = s.CreateAccountMembership(&accountMembership); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (s *PostgresStore) cleanup(tables []string) error {
 	for i := 0; i < len(tables); i++ {
-		query := `drop table if exists $1`
-		if _, err := s.Db.Exec(query, tables[i]); err != nil {
+		query := `drop table if exists ` + tables[i]
+		if _, err := s.Db.Exec(query); err != nil {
 			return err
 		}
 	}
-	_, err := s.Db.Exec("drop type if exists event_type")
+	_, err := s.Db.Exec(`drop type if exists event_type`)
 	return err
 }
 
@@ -84,15 +90,29 @@ func (s *PostgresStore) createAccountTable() error {
 func (s *PostgresStore) createMembershipTable() error {
 	query := `create table if not exists membership (
 		id serial primary key,
-		account_id int,
 		type event_type,
-		valid_from timestamp,
-		valid_to timestamp,
-		entries_left int,
+		duration_days int,
+		entries int,
 		price int,
 		created_at timestamp default current_timestamp,
+		deleted_at timestamp default null
+	)`
+	_, err := s.Db.Exec(query)
+	return err
+}
+
+func (s *PostgresStore) createAccountMembershipTable() error {
+	query := `create table if not exists account_membership (
+		id serial primary key,
+		account_id int,
+		membership_id int,
+		valid_from timestamp,
+		valid_to timestamp,
+		entries int,
+		created_at timestamp default current_timestamp,
 		deleted_at timestamp default null,
-		foreign key (account_id) references account(id)
+		foreign key (account_id) references account(id),
+		foreign key (membership_id) references membership(id)
 	)`
 	_, err := s.Db.Exec(query)
 	return err

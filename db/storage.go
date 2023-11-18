@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	customErr "gym_management_system/errors"
 	"log"
 	"os"
 	"reflect"
@@ -16,6 +17,7 @@ type Storage interface {
 	AccountRepository
 	EntryRepository
 	MembershipRepository
+	AccountMembershipRepository
 	EventRepository
 }
 
@@ -57,15 +59,13 @@ func NewPostgresStore() (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) Init() error {
-	tables := []string{"entry", "membership", "account", "event"}
 	var err error
-	if err = s.cleanup(tables); err != nil {
-		return err
-	}
-
-	if err = s.createEventType(); err != nil {
-		return err
-	}
+	//if _, err = s.Db.Exec(`drop type if exists event_type`); err != nil {
+	//	return err
+	//}
+	//if err = s.createEventType(); err != nil {
+	//	return err
+	//}
 	if err = s.createAccountTable(); err != nil {
 		return err
 	}
@@ -73,6 +73,9 @@ func (s *PostgresStore) Init() error {
 		return err
 	}
 	if err = s.createMembershipTable(); err != nil {
+		return err
+	}
+	if err = s.createAccountMembershipTable(); err != nil {
 		return err
 	}
 	if err = s.createEntryTable(); err != nil {
@@ -137,17 +140,18 @@ func commitOrRollback(tx *sql.Tx, err *error) {
 	}
 }
 
-func checkDeleted(tx *sql.Tx, id int, query string) error {
+func checkDeleted(tx *sql.Tx, table string, id int) error {
 	var deletedAt *time.Time
+	query := `select deleted_at from` + table + ` where id = $1`
 	err := tx.QueryRow(query, id).Scan(&deletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return errors.New("record with given id does not exist")
+		return customErr.RecordNotFound{Id: id}
 	}
 	if err != nil {
 		return err
 	}
-	if deletedAt == nil {
-		return errors.New("record already deleted")
+	if deletedAt != nil {
+		return customErr.AlreadyDeleted{Id: id}
 	}
 	return nil
 }

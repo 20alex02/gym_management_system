@@ -77,12 +77,11 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	}
 	defer commitOrRollback(tx, &err)
 
-	query := `select deleted_at from account where id = $1`
-	err = checkDeleted(tx, id, query)
+	err = checkDeleted(tx, "account", id)
 	if err != nil {
 		return err
 	}
-	query = `update account set deleted_at = current_timestamp where id = $1`
+	query := `update account set deleted_at = current_timestamp where id = $1`
 	_, err = tx.Exec(query, id)
 	return err
 }

@@ -31,18 +31,28 @@ type Event struct {
 	Capacity int       `json:"capacity"`
 	Price    int       `json:"price"`
 
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
+}
+
+type Membership struct {
+	Id           int       `json:"id"`
+	Type         EventType `json:"type"`
+	DurationDays int       `json:"durationDays"`
+	Entries      int       `json:"entries"`
+	Price        int       `json:"price"`
+
 	CreatedAt time.Time  `json:"createdAt"`
 	DeletedAt *time.Time `json:"deletedAt"`
 }
 
-type Membership struct {
-	Id          int       `json:"id"`
-	Type        EventType `json:"type"`
-	ValidFrom   time.Time `json:"validFrom"`
-	ValidTo     time.Time `json:"validTo"`
-	EntriesLeft int       `json:"entriesLeft"`
-	Price       int       `json:"price"`
-	*Account
+type AccountMembership struct {
+	Id           int       `json:"id"`
+	AccountId    int       `json:"accountId"`
+	MembershipId int       `json:"membershipId"`
+	ValidFrom    time.Time `json:"validFrom"`
+	ValidTo      time.Time `json:"validTo"`
+	Entries      int       `json:"entries"`
 
 	CreatedAt time.Time  `json:"createdAt"`
 	DeletedAt *time.Time `json:"deletedAt"`

@@ -18,6 +18,14 @@ func (e AlreadyDeleted) Error() string {
 	return fmt.Sprintf("record with Id %d is already deleted", e.Id)
 }
 
+type ConflictingRecord struct {
+	Property string
+}
+
+func (e ConflictingRecord) Error() string {
+	return fmt.Sprintf("conflicting %s", e.Property)
+}
+
 type PermissionDenied struct {
 	Id int
 }
