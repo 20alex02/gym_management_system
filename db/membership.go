@@ -1,17 +1,18 @@
 package db
 
 type MembershipRepository interface {
-	CreateMembership(m *Membership) (int, error)
+	//CreateMembership(m *Membership) (int, error)
 	//GetAllMembershipsByAccountId(id int) (*[]Membership, error)
 	GetAllMemberships() (*[]Membership, error)
 	//GetMembershipById(id int) (*Membership, error)
-	DeleteMembership(id int) error
+	//DeleteMembership(id int) error
 }
 
+/*
 func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
 	query := `insert into membership (
 						type,
-						duration_days, 
+						duration_days,
 						entries,
 						price
 	) values ($1, $2, $3, $4) returning id`
@@ -28,6 +29,7 @@ func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
 	}
 	return id, nil
 }
+*/
 
 //func (s *PostgresStore) GetAllMembershipsByAccountId(id int) (*[]Membership, error) {
 //	query := `select * from membership
@@ -70,6 +72,7 @@ func (s *PostgresStore) GetAllMemberships() (*[]Membership, error) {
 //	return membership, nil
 //}
 
+/*
 func (s *PostgresStore) DeleteMembership(id int) error {
 	tx, err := s.Db.Begin()
 	if err != nil {
@@ -85,3 +88,4 @@ func (s *PostgresStore) DeleteMembership(id int) error {
 	_, err = tx.Exec(query, id)
 	return err
 }
+*/

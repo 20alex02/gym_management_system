@@ -3,19 +3,23 @@ package errors
 import "fmt"
 
 type RecordNotFound struct {
-	Id int
+	Entity   string
+	Property string
+	Value    interface{}
 }
 
 func (e RecordNotFound) Error() string {
-	return fmt.Sprintf("record with Id %d not found", e.Id)
+	return fmt.Sprintf("%s with %s: %v not found", e.Entity, e.Property, e.Value)
 }
 
 type AlreadyDeleted struct {
-	Id int
+	Entity   string
+	Property string
+	Value    interface{}
 }
 
 func (e AlreadyDeleted) Error() string {
-	return fmt.Sprintf("record with Id %d is already deleted", e.Id)
+	return fmt.Sprintf("%s with %s: %v is already deleted", e.Entity, e.Property, e.Value)
 }
 
 type ConflictingRecord struct {

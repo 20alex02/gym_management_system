@@ -1,6 +1,9 @@
 package db
 
-import "time"
+import (
+	"golang.org/x/crypto/bcrypt"
+	"time"
+)
 
 type EventType string
 
@@ -18,8 +21,8 @@ type Account struct {
 	Email             string `json:"email"`
 	Credit            int    `json:"credit"`
 
-	CreatedAt time.Time  `json:"createdAt"`
-	DeletedAt *time.Time `json:"deletedAt"`
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
 }
 
 type Event struct {
@@ -42,8 +45,8 @@ type Membership struct {
 	Entries      int       `json:"entries"`
 	Price        int       `json:"price"`
 
-	CreatedAt time.Time  `json:"createdAt"`
-	DeletedAt *time.Time `json:"deletedAt"`
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
 }
 
 type AccountMembership struct {
@@ -54,8 +57,8 @@ type AccountMembership struct {
 	ValidTo      time.Time `json:"validTo"`
 	Entries      int       `json:"entries"`
 
-	CreatedAt time.Time  `json:"createdAt"`
-	DeletedAt *time.Time `json:"deletedAt"`
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
 }
 
 type Entry struct {
@@ -64,6 +67,20 @@ type Entry struct {
 	*Membership
 	*Event
 
-	CreatedAt time.Time  `json:"createdAt"`
-	DeletedAt *time.Time `json:"deletedAt"`
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
+}
+
+func NewAccount(firstName, lastName, email, password string) (*Account, error) {
+	encPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Account{
+		FirstName:         firstName,
+		LastName:          lastName,
+		Email:             email,
+		EncryptedPassword: string(encPw),
+	}, nil
 }

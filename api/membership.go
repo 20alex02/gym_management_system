@@ -1,21 +1,15 @@
 package api
 
 import (
-	"fmt"
+	"gym_management_system/db"
 	"net/http"
 )
 
 func (s *Server) handleGetMemberships(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != "GET" {
-		return fmt.Errorf("method not allowed %s", r.Method)
+	memberships, err := s.store.GetAllMemberships()
+	if err != nil {
+		return err
 	}
-	//memberships, err := s.store.G
-	switch r.Method {
-	case "GET":
-		return s.handleGetAccount(w, r)
-	case "DELETE":
-		return s.handleDeleteAccount(w, r)
-	default:
-		return fmt.Errorf("method not allowed %s", r.Method)
-	}
+
+	return writeJSON(w, http.StatusOK, map[string][]db.Membership{"memberships": *memberships})
 }

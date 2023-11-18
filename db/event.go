@@ -3,17 +3,18 @@ package db
 import "time"
 
 type EventRepository interface {
-	CreateEvent(e *Event) (int, error)
+	//CreateEvent(e *Event) (int, error)
 	GetAllEvents(from time.Time, to time.Time) (*[]Event, error)
-	GetEventById(id int) (*Event, error)
+	//GetEventById(id int) (*Event, error)
 	//UpdateEvent(e *Event) error
-	DeleteEvent(id int) error
+	//DeleteEvent(id int) error
 }
 
+/*
 func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 	query := `insert into event (
 		type,
-		title, 
+		title,
 		start_time,
 		end_time,
 		capacity,
@@ -35,6 +36,8 @@ func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 	return id, nil
 }
 
+*/
+
 func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, error) {
 	query := `select * from event 
          where deleted_at is null 
@@ -53,6 +56,7 @@ func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, er
 	return events, nil
 }
 
+/*
 func (s *PostgresStore) GetEventById(id int) (*Event, error) {
 	query := `select * from event where id = $1`
 	row := s.Db.QueryRow(query, id)
@@ -62,6 +66,8 @@ func (s *PostgresStore) GetEventById(id int) (*Event, error) {
 	}
 	return event, nil
 }
+
+*/
 
 //func (s *PostgresStore) UpdateEvent(e *Event) error {
 //	query := `update event set
@@ -76,12 +82,14 @@ func (s *PostgresStore) GetEventById(id int) (*Event, error) {
 //	_, errors := s.Db.Exec(query, e.Type, e.Title, e.Start, e.End, e.Capacity, e.Price, e.Id)
 //	return errors
 //}
-
+/*
 // TODO delete all entries linked to the event and do refunds if the event has not started yet
 func (s *PostgresStore) DeleteEvent(id int) error {
-	query := `update event set deleted_at = current_timestamp 
+	query := `update event set deleted_at = current_timestamp
              where id = $1 and deleted_at is null`
 
 	_, err := s.Db.Exec(query, id)
 	return err
 }
+
+*/

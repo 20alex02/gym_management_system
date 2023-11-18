@@ -33,24 +33,3 @@ func main() {
 	server := api.NewServer(":3000", store)
 	server.Run()
 }
-
-//member := db.Account{FirstName: "john", LastName: "doe", Email: "john.doe@mail.com", EncryptedPassword: "asdf"}
-//if _, errors := store.CreateAccount(&member); errors != nil {
-//	log.Fatal(errors)
-//}
-//member.Email = "john@doe.com"
-//member.FirstName = "john"
-//member.LastName = "doe"
-//if _, errors := store.CreateAccount(&member); errors != nil {
-//	log.Fatal(errors)
-//}
-//accounts, errors := store.GetAllAccounts()
-//if errors != nil {
-//	log.Fatal(errors)
-//}
-//fmt.Println(accounts)
-//account, errors := store.GetAccountById(3)
-//if errors != nil {
-//	log.Fatal(errors)
-//}
-//fmt.Println(account)

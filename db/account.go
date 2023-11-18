@@ -3,9 +3,10 @@ package db
 type AccountRepository interface {
 	CreateAccount(a *Account) (int, error)
 	GetAccountById(id int) (*Account, error)
-	GetAllAccounts() (*[]Account, error)
-	UpdateAccount(a *Account) error
-	DeleteAccount(id int) error
+	GetAccountByEmail(email string) (*Account, error)
+	//GetAllAccounts() (*[]Account, error)
+	//UpdateAccount(a *Account) error
+	//DeleteAccount(id int) error
 }
 
 func (s *PostgresStore) CreateAccount(a *Account) (int, error) {
@@ -41,6 +42,17 @@ func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
 	return account, nil
 }
 
+func (s *PostgresStore) GetAccountByEmail(email string) (*Account, error) {
+	query := `select * from account where email = $1`
+	row := s.Db.QueryRow(query, email)
+	account := &Account{}
+	if err := scanRow(row, account); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+/*
 func (s *PostgresStore) GetAllAccounts() (*[]Account, error) {
 	query := `select * from account where deleted_at is null`
 	rows, err := s.Db.Query(query)
@@ -56,10 +68,11 @@ func (s *PostgresStore) GetAllAccounts() (*[]Account, error) {
 
 	return accounts, nil
 }
-
+*/
+/*
 // TODO update acc info or update credit
 func (s *PostgresStore) UpdateAccount(a *Account) error {
-	query := `update account set 
+	query := `update account set
                    first_name = $1,
                    last_name = $2,
                    encrypted_password = $3,
@@ -69,7 +82,8 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
 	_, err := s.Db.Exec(query, a.FirstName, a.LastName, a.EncryptedPassword, a.Email, a.Credit)
 	return err
 }
-
+*/
+/*
 func (s *PostgresStore) DeleteAccount(id int) error {
 	tx, err := s.Db.Begin()
 	if err != nil {
@@ -85,3 +99,4 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	_, err = tx.Exec(query, id)
 	return err
 }
+*/

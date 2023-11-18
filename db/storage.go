@@ -145,13 +145,13 @@ func checkDeleted(tx *sql.Tx, table string, id int) error {
 	query := `select deleted_at from` + table + ` where id = $1`
 	err := tx.QueryRow(query, id).Scan(&deletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return customErr.RecordNotFound{Id: id}
+		return customErr.RecordNotFound{Entity: table, Property: "id", Value: id}
 	}
 	if err != nil {
 		return err
 	}
 	if deletedAt != nil {
-		return customErr.AlreadyDeleted{Id: id}
+		return customErr.AlreadyDeleted{Entity: table, Property: "id", Value: id}
 	}
 	return nil
 }
