@@ -1,16 +1,17 @@
 package db
 
-import "time"
+import (
+	"time"
+)
 
 type EventRepository interface {
-	//CreateEvent(e *Event) (int, error)
+	CreateEvent(e *Event) (int, error)
 	GetAllEvents(from time.Time, to time.Time) (*[]Event, error)
 	//GetEventById(id int) (*Event, error)
 	//UpdateEvent(e *Event) error
 	//DeleteEvent(id int) error
 }
 
-/*
 func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 	query := `insert into event (
 		type,
@@ -36,8 +37,6 @@ func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 	return id, nil
 }
 
-*/
-
 func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, error) {
 	query := `select * from event 
          where deleted_at is null 
@@ -56,18 +55,21 @@ func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, er
 	return events, nil
 }
 
-/*
-func (s *PostgresStore) GetEventById(id int) (*Event, error) {
-	query := `select * from event where id = $1`
-	row := s.Db.QueryRow(query, id)
-	event := &Event{}
-	if err := scanRow(row, event); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
-*/
+//func (s *PostgresStore) GetEventById(id int) (*Event, error) {
+//	query := `select * from event where id = $1`
+//	row := s.Db.QueryRow(query, id)
+//	event := &Event{}
+//	if err := scanRow(row, event); err != nil {
+//		if errors.Is(err, sql.ErrNoRows) {
+//			return nil, customErr.RecordNotFound{Record: "event", Property: "id", Value: id}
+//		}
+//		return nil, err
+//	}
+//	if event.DeletedAt != nil {
+//		return nil, customErr.DeletedRecord{Record: "event", Property: "id", Value: id}
+//	}
+//	return event, nil
+//}
 
 //func (s *PostgresStore) UpdateEvent(e *Event) error {
 //	query := `update event set

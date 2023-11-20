@@ -1,71 +1,175 @@
 package db
 
+import (
+	"gym_management_system/errors"
+	"time"
+)
+
 type EntryRepository interface {
 	CreateEntry(e *Entry) (int, error)
-	GetEntryById(id int) (*Entry, error)
-	GetAllEntriesByAccountId(id int) (*[]Entry, error)
+	//GetEntryById(id int) (*Entry, error)
+	//GetAllEntriesByAccountId(id int) (*[]Entry, error)
 	DeleteEntry(id int) error
 }
 
-func getMembershipId(m *Membership) interface{} {
-	if m == nil {
-		return nil
-	}
-	return m.Id
-}
-
-// TODO
 func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
-	//tx, errors := s.Db.Begin()
-	//if errors != nil {
-	//	return nil, errors
-	//}
-	//defer commitOrRollback(tx, &errors)
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer commitOrRollback(tx, &err)
 
-	query := `insert into entry (
+	event := Event{}
+	err = checkRecord(tx, EVENT, e.EventId, &event)
+	if err != nil {
+		return 0, err
+	}
+	if event.Start.Before(time.Now()) {
+		return 0, errors.EntryError{Message: "event already started"}
+	}
+	if event.Capacity < 1 {
+		return 0, errors.EntryError{Message: "full capacity"}
+	}
+	query := `update event set capacity = $1 where id = $2`
+	_, err = tx.Exec(query, event.Capacity+1, event.Id)
+	if err != nil {
+		return 0, err
+	}
+
+	account := Account{}
+	err = checkRecord(tx, ACCOUNT, e.AccountId, &account)
+	if err != nil {
+		return 0, err
+	}
+
+	if e.AccountMembershipId == nil {
+		if account.Credit < event.Price {
+			return 0, errors.InsufficientResources{}
+		}
+		query := `update account set credit = $1 where id = $2`
+		_, err = tx.Exec(query, account.Credit-event.Price, account.Id)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		accountMembership := AccountMembership{}
+		err = checkRecord(tx, ACCOUNT_MEMBERSHIP, *e.AccountMembershipId, &accountMembership)
+		if err != nil {
+			return 0, err
+		}
+		if event.Start.Before(accountMembership.ValidFrom) || event.End.After(accountMembership.ValidTo) {
+			return 0, errors.EntryError{Message: "event does not occur within membership validity"}
+		}
+		if accountMembership.Entries < 1 {
+			return 0, errors.InsufficientResources{}
+		}
+
+		membership := Membership{}
+		err = checkRecord(tx, MEMBERSHIP, accountMembership.MembershipId, &membership)
+		if err != nil {
+			return 0, err
+		}
+		if event.Type != membership.Type && membership.Type != ALL {
+			return 0, errors.EntryError{Message: "invalid membership type"}
+		}
+		query := `update account_membership set entries = $1 where id = $2`
+		_, err = tx.Exec(query, accountMembership.Entries-1, accountMembership.Id)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	query = `insert into entry (
                    account_id,
                    event_id,
-                   membership_id
+                   account_membership_id
 	) values ($1, $2, $3) returning id`
 
 	var id int
-	err := s.Db.QueryRow(
+	err = s.Db.QueryRow(
 		query,
-		e.Account.Id,
-		e.Event.Id,
-		getMembershipId(e.Membership)).Scan(&id)
+		e.AccountId,
+		e.EventId,
+		e.AccountMembershipId).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 	return id, nil
 }
 
-func (s *PostgresStore) GetEntryById(id int) (*Entry, error) {
-	query := `select * from entry where id = $1`
-	row := s.Db.QueryRow(query, id)
-	entry := &Entry{}
-	if err := scanRow(row, entry); err != nil {
-		return nil, err
-	}
-	return entry, nil
-}
+//func (s *PostgresStore) GetEntryById(id int) (*Entry, error) {
+//	query := `select * from entry where id = $1`
+//	row := s.Db.QueryRow(query, id)
+//	entry := &Entry{}
+//	if err := scanRow(row, entry); err != nil {
+//		return nil, err
+//	}
+//	return entry, nil
+//}
 
-func (s *PostgresStore) GetAllEntriesByAccountId(id int) (*[]Entry, error) {
-	query := `select * from entry where account_id = $1`
-	rows, err := s.Db.Query(query, id)
-	if err != nil {
-		return nil, err
-	}
-	entries := &[]Entry{}
-	if err := scanRows(rows, entries); err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
+//func (s *PostgresStore) GetAllEntriesByAccountId(id int) (*[]Entry, error) {
+//	query := `select * from entry where account_id = $1`
+//	rows, err := s.Db.Query(query, id)
+//	if err != nil {
+//		return nil, err
+//	}
+//	entries := &[]Entry{}
+//	if err := scanRows(rows, entries); err != nil {
+//		return nil, err
+//	}
+//	return entries, nil
+//}
 
-// TODO refund
 func (s *PostgresStore) DeleteEntry(id int) error {
-	query := `update entry set deleted_at = current_timestamp where id = $1 and deleted_at is null`
-	_, err := s.Db.Exec(query, id)
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrRollback(tx, &err)
+
+	entry := Entry{}
+	err = checkRecord(tx, ENTRY, id, &entry)
+	if err != nil {
+		return err
+	}
+	event := Event{}
+	err = checkRecord(tx, EVENT, entry.EventId, &event)
+	if err != nil {
+		return err
+	}
+	if event.Start.Before(time.Now()) {
+		return errors.EntryError{Message: "event already started"}
+	}
+	account := Account{}
+	err = checkRecord(tx, ACCOUNT, entry.AccountId, &account)
+	if err != nil {
+		return err
+	}
+	membership := AccountMembership{}
+	err = checkRecord(tx, ACCOUNT_MEMBERSHIP, entry.AccountId, &membership)
+	if err != nil {
+		return err
+	}
+
+	query := `update event set capacity = $1 where id = $2`
+	_, err = s.Db.Exec(query, event.Capacity+1, event.Id)
+	if err != nil {
+		return err
+	}
+	if entry.AccountMembershipId == nil {
+		query := `update account set credit = $1 where id = $2`
+		_, err = s.Db.Exec(query, account.Credit+event.Price, account.Id)
+		if err != nil {
+			return err
+		}
+	} else {
+		query := `update account_membership set entries = $1 where id = $2`
+		_, err = s.Db.Exec(query, membership.Entries+1, membership.Id)
+		if err != nil {
+			return err
+		}
+	}
+	query = `update entry set deleted_at = current_timestamp where id = $1 and deleted_at is null`
+	_, err = s.Db.Exec(query, id)
 	return err
 }

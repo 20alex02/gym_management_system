@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (s *Server) handleGetMemberships(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleGetMemberships(w http.ResponseWriter, _ *http.Request) error {
 	memberships, err := s.store.GetAllMemberships()
 	if err != nil {
 		return err

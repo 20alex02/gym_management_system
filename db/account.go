@@ -1,12 +1,18 @@
 package db
 
+import (
+	"database/sql"
+	"errors"
+	customErr "gym_management_system/errors"
+)
+
 type AccountRepository interface {
 	CreateAccount(a *Account) (int, error)
 	GetAccountById(id int) (*Account, error)
 	GetAccountByEmail(email string) (*Account, error)
 	//GetAllAccounts() (*[]Account, error)
 	//UpdateAccount(a *Account) error
-	//DeleteAccount(id int) error
+	DeleteAccount(id int) error
 }
 
 func (s *PostgresStore) CreateAccount(a *Account) (int, error) {
@@ -27,6 +33,9 @@ func (s *PostgresStore) CreateAccount(a *Account) (int, error) {
 		a.Email,
 		a.Credit).Scan(&id)
 	if err != nil {
+		if isDuplicateKeyError(err) {
+			return 0, customErr.ConflictingRecord{Property: "email"}
+		}
 		return 0, err
 	}
 	return id, nil
@@ -37,7 +46,13 @@ func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
 	row := s.Db.QueryRow(query, id)
 	account := &Account{}
 	if err := scanRow(row, account); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customErr.RecordNotFound{Record: "account", Property: "id", Value: id}
+		}
 		return nil, err
+	}
+	if account.DeletedAt != nil {
+		return nil, customErr.DeletedRecord{Record: "account", Property: "id", Value: id}
 	}
 	return account, nil
 }
@@ -47,7 +62,13 @@ func (s *PostgresStore) GetAccountByEmail(email string) (*Account, error) {
 	row := s.Db.QueryRow(query, email)
 	account := &Account{}
 	if err := scanRow(row, account); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, customErr.RecordNotFound{Record: "account", Property: "email", Value: email}
+		}
 		return nil, err
+	}
+	if account.DeletedAt != nil {
+		return nil, customErr.DeletedRecord{Record: "account", Property: "email", Value: email}
 	}
 	return account, nil
 }
@@ -83,7 +104,7 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
 	return err
 }
 */
-/*
+
 func (s *PostgresStore) DeleteAccount(id int) error {
 	tx, err := s.Db.Begin()
 	if err != nil {
@@ -91,12 +112,38 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	}
 	defer commitOrRollback(tx, &err)
 
-	err = checkDeleted(tx, "account", id)
+	account := Account{}
+	err = checkRecord(tx, ACCOUNT, id, &account)
 	if err != nil {
 		return err
 	}
+	//var deletedAt *time.Time
+	//query := `select deleted_at from account where id = $1`
+	//err = tx.QueryRow(query, id).Scan(&deletedAt)
+	//if err != nil {
+	//	if errors.Is(err, sql.ErrNoRows) {
+	//		return customErr.RecordNotFound{Record: "account", Property: "id", Value: id}
+	//	}
+	//	return err
+	//}
+	//if deletedAt != nil {
+	//	return customErr.DeletedRecord{Record: "account", Property: "id", Value: id}
+	//}
 	query := `update account set deleted_at = current_timestamp where id = $1`
+	_, err = tx.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	query = `update entry set deleted_at = current_timestamp 
+             where account_id = $1 and deleted_at is null`
+	_, err = tx.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	query = `update account_membership set deleted_at = current_timestamp 
+                          where account_id = $1 and deleted_at is null`
 	_, err = tx.Exec(query, id)
 	return err
 }
-*/

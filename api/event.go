@@ -1,8 +1,9 @@
 package api
 
 import (
-	"encoding/json"
 	"gym_management_system/db"
+	"gym_management_system/errors"
+	"log"
 	"net/http"
 )
 
@@ -16,11 +17,19 @@ import (
 //}
 
 func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
-	req := new(GetEventsRequest)
-	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+	from, err := getTime(r, "from")
+	if err != nil {
+		return errors.InvalidRequestFormat{Message: err.Error()}
 	}
-	events, err := s.store.GetAllEvents(req.From, req.To)
+	to, err := getTime(r, "to")
+	if err != nil {
+		log.Println("invalid to format")
+		return errors.InvalidRequestFormat{Message: err.Error()}
+	}
+
+	log.Println("req parsed")
+	events, err := s.store.GetAllEvents(from, to)
+	log.Println("events retrieved from db")
 	if err != nil {
 		return err
 	}

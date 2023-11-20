@@ -1,14 +1,13 @@
 package db
 
 type MembershipRepository interface {
-	//CreateMembership(m *Membership) (int, error)
+	CreateMembership(m *Membership) (int, error)
 	//GetAllMembershipsByAccountId(id int) (*[]Membership, error)
 	GetAllMemberships() (*[]Membership, error)
 	//GetMembershipById(id int) (*Membership, error)
 	//DeleteMembership(id int) error
 }
 
-/*
 func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
 	query := `insert into membership (
 						type,
@@ -29,7 +28,6 @@ func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
 	}
 	return id, nil
 }
-*/
 
 //func (s *PostgresStore) GetAllMembershipsByAccountId(id int) (*[]Membership, error) {
 //	query := `select * from membership
@@ -80,7 +78,7 @@ func (s *PostgresStore) DeleteMembership(id int) error {
 	}
 	defer commitOrRollback(tx, &err)
 
-	err = checkDeleted(tx, "membership", id)
+	err = checkRecord(tx, MEMBERSHIP, id)
 	if err != nil {
 		return err
 	}

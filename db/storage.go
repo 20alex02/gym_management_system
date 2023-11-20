@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	customErr "gym_management_system/errors"
 	"log"
 	"os"
 	"reflect"
-	"time"
 )
 
 type Storage interface {
@@ -112,6 +112,7 @@ func createColumns(target interface{}) []interface{} {
 func scanRows[T any](rows *sql.Rows, target *[]T) error {
 	var elem T
 	columns := createColumns(&elem)
+	defer closeRows(rows)
 	for rows.Next() {
 		err := rows.Scan(columns...)
 		if err != nil {
@@ -140,18 +141,26 @@ func commitOrRollback(tx *sql.Tx, err *error) {
 	}
 }
 
-func checkDeleted(tx *sql.Tx, table string, id int) error {
-	var deletedAt *time.Time
-	query := `select deleted_at from` + table + ` where id = $1`
-	err := tx.QueryRow(query, id).Scan(&deletedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return customErr.RecordNotFound{Entity: table, Property: "id", Value: id}
-	}
-	if err != nil {
+func checkRecord[T any](tx *sql.Tx, table Table, id int, record *T) error {
+	query := fmt.Sprintf(`select * from %s where id = $1`, table)
+	row := tx.QueryRow(query, id)
+	if err := scanRow(row, record); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return customErr.RecordNotFound{Record: table, Property: "id", Value: id}
+		}
 		return err
 	}
-	if deletedAt != nil {
-		return customErr.AlreadyDeleted{Entity: table, Property: "id", Value: id}
+
+	v := reflect.ValueOf(record).Elem()
+	deletedAtField := v.FieldByName("DeletedAt")
+	if deletedAtField.IsValid() && !deletedAtField.IsNil() {
+		return customErr.DeletedRecord{Record: table, Property: "id", Value: id}
 	}
 	return nil
+}
+
+func isDuplicateKeyError(err error) bool {
+	var pqErr *pq.Error
+	ok := errors.As(err, &pqErr)
+	return ok && pqErr.Code == "23505" // PostgreSQL error code for unique violation
 }

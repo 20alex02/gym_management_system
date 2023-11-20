@@ -123,12 +123,12 @@ func (s *PostgresStore) createEntryTable() error {
 		id serial primary key,
 		account_id int,
 		event_id int,
-		membership_id int null,
+		account_membership_id int null,
 		created_at timestamp default current_timestamp,
 		deleted_at timestamp default null,
 		foreign key (account_id) references account(id),
 		foreign key (event_id) references event(id),
-		foreign key (membership_id) references membership(id)
+		foreign key (account_membership_id) references account_membership(id)
 	)`
 	_, err := s.Db.Exec(query)
 	return err

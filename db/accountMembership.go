@@ -1,12 +1,69 @@
 package db
 
+import (
+	customErr "gym_management_system/errors"
+)
+
 type AccountMembershipRepository interface {
 	CreateAccountMembership(m *AccountMembership) (int, error)
 	GetAllAccountMemberships(id int) (*[]AccountMembership, error)
 }
 
 func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, error) {
-	query := `insert into account_membership (
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer commitOrRollback(tx, &err)
+
+	account := Account{}
+	err = checkRecord(tx, ACCOUNT, m.AccountId, &account)
+	if err != nil {
+		return 0, err
+	}
+	//query := `select (deleted_at, credit) from account where id = $1`
+	//var deletedAt *time.Time
+	//var credit int
+	//err = tx.QueryRow(query, m.AccountId).Scan(&deletedAt, &credit)
+	//if err != nil {
+	//	if errors.Is(err, sql.ErrNoRows) {
+	//		return 0, customErr.RecordNotFound{Record: "account", Property: "id", Value: m.AccountId}
+	//	}
+	//	return 0, err
+	//}
+	//if deletedAt != nil {
+	//	return 0, customErr.DeletedRecord{Record: "account", Property: "id", Value: m.AccountId}
+	//}
+
+	membership := Membership{}
+	err = checkRecord(tx, MEMBERSHIP, m.MembershipId, &membership)
+	if err != nil {
+		return 0, err
+	}
+	//var price int
+	//query = `select (deleted_at, price) from membership where id = $1`
+	//err = tx.QueryRow(query, m.MembershipId).Scan(&deletedAt, &price)
+	//if err != nil {
+	//	if errors.Is(err, sql.ErrNoRows) {
+	//		return 0, customErr.RecordNotFound{Record: "membership", Property: "id", Value: m.MembershipId}
+	//	}
+	//	return 0, err
+	//}
+	//if deletedAt != nil {
+	//	return 0, customErr.DeletedRecord{Record: "account", Property: "id", Value: m.AccountId}
+	//}
+
+	if account.Credit < membership.Price {
+		return 0, customErr.InsufficientResources{}
+	}
+	account.Credit -= membership.Price
+	query := `update account set credit = $1 where id = $2`
+	_, err = tx.Exec(query, account.Credit, account.Id)
+	if err != nil {
+		return 0, err
+	}
+
+	query = `insert into account_membership (
 			account_id,
 			membership_id,
 			valid_from,
@@ -15,7 +72,7 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 		) values ($1, $2, $3, $4, $5) returning id`
 
 	var id int
-	err := s.Db.QueryRow(
+	err = tx.QueryRow(
 		query,
 		m.AccountId,
 		m.MembershipId,

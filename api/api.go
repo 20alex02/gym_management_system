@@ -3,13 +3,13 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/gorilla/mux"
 	"gym_management_system/db"
 	customErr "gym_management_system/errors"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Server struct {
@@ -47,22 +47,24 @@ func (s *Server) Run() {
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
 	authRouter.Use(withJWTAuth)
 
-	//authRouter.HandleFunc("/events/{eventID}/entries", makeHTTPHandleFunc(handleMakeEntry)).Methods("POST")
-	//authRouter.HandleFunc("/events/{eventID}/entries/{entryID}", makeHTTPHandleFunc(handleDeleteEntry)).Methods("DELETE")
-	//authRouter.HandleFunc("/memberships/{membershipID}/purchase", makeHTTPHandleFunc(handlePurchaseMembership)).Methods("POST")
+	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleCreateEntry)).Methods("POST")
+	//authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")
+	authRouter.HandleFunc("/events/{eventId}/entries/{entryId}", makeHTTPHandleFunc(s.handleDeleteEntry)).Methods("DELETE")
+	authRouter.HandleFunc("/memberships/{membershipId}/purchase", makeHTTPHandleFunc(s.handleCreateAccountMembership)).Methods("POST")
 	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleGetAccount)).Methods("GET")
 	//authRouter.HandleFunc("/account", makeHTTPHandleFunc(handleModifyAccountDetails)).Methods("PUT")
-	//authRouter.HandleFunc("/account", makeHTTPHandleFunc(handleDeleteAccount)).Methods("DELETE")
-	//authRouter.HandleFunc("/account/memberships", makeHTTPHandleFunc(handleViewPurchasedMemberships)).Methods("GET")
+	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleDeleteAccount)).Methods("DELETE")
+	authRouter.HandleFunc("/account/memberships", makeHTTPHandleFunc(s.handleGetAccountMemberships)).Methods("GET")
+	//authRouter.HandleFunc("/account/entries", makeHTTPHandleFunc(s.handleGetAccountEntries)).Methods("GET")
 
 	// Admin Endpoints with JWT authentication
 	//adminRouter := apiRouter.PathPrefix("/admin").Subrouter()
 	//adminRouter.Use(withJWTAuth)
 
 	//adminRouter.HandleFunc("/events", makeHTTPHandleFunc(handleCreateEvent)).Methods("POST")
-	//adminRouter.HandleFunc("/events/{eventID}", makeHTTPHandleFunc(handleDeleteEvent)).Methods("DELETE")
+	//adminRouter.HandleFunc("/events/{eventId}", makeHTTPHandleFunc(handleDeleteEvent)).Methods("DELETE")
 	//adminRouter.HandleFunc("/memberships", makeHTTPHandleFunc(handleCreateMembership)).Methods("POST")
-	//adminRouter.HandleFunc("/memberships/{membershipID}", makeHTTPHandleFunc(handleDeleteMembership)).Methods("DELETE")
+	//adminRouter.HandleFunc("/memberships/{membershipId}", makeHTTPHandleFunc(handleDeleteMembership)).Methods("DELETE")
 	/*
 		// Start the server
 		//http.Handle("/", r)
@@ -98,11 +100,11 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 	var status int
 	var errorMessage string
 	switch {
-	case errors.Is(e, customErr.ConflictingRecord{}):
+	case errors.As(e, &customErr.ConflictingRecord{}), errors.As(e, &customErr.InvalidRequestFormat{}):
 		status = http.StatusBadRequest
-	case errors.Is(e, customErr.PermissionDenied{}):
+	case errors.As(e, &customErr.PermissionDenied{}):
 		status = http.StatusForbidden
-	case errors.Is(e, customErr.RecordNotFound{}), errors.Is(e, customErr.AlreadyDeleted{}):
+	case errors.As(e, &customErr.RecordNotFound{}), errors.As(e, &customErr.DeletedRecord{}):
 		status = http.StatusNotFound
 	default:
 		status = http.StatusInternalServerError
@@ -120,6 +122,7 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
+			log.Println("nested function failed")
 			writeErrorJSON(w, err)
 		}
 	}
@@ -132,11 +135,18 @@ func writeJSON(w http.ResponseWriter, status int, v any) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
-func getId(r *http.Request) (int, error) {
-	idStr := mux.Vars(r)["id"]
+func getId(r *http.Request, key string) (int, error) {
+	idStr, ok := mux.Vars(r)[key]
+	if !ok {
+		return 0, customErr.InvalidRequestFormat{Message: "missing " + key}
+	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return id, fmt.Errorf("invalid id given %s", idStr)
+		return id, customErr.InvalidRequestFormat{Message: err.Error()}
 	}
 	return id, nil
+}
+
+func getTime(r *http.Request, key string) (time.Time, error) {
+	return time.Parse(time.RFC3339, r.URL.Query().Get(key))
 }

@@ -13,6 +13,16 @@ const (
 	ALL      EventType = "all"
 )
 
+type Table string
+
+const (
+	ACCOUNT            Table = "account"
+	EVENT              Table = "event"
+	MEMBERSHIP         Table = "membership"
+	ENTRY              Table = "entry"
+	ACCOUNT_MEMBERSHIP Table = "account_membership"
+)
+
 type Account struct {
 	Id                int    `json:"id"`
 	FirstName         string `json:"firstName"`
@@ -62,10 +72,10 @@ type AccountMembership struct {
 }
 
 type Entry struct {
-	Id int `json:"id"`
-	*Account
-	*Membership
-	*Event
+	Id                  int  `json:"id"`
+	AccountId           int  `json:"accountId"`
+	EventId             int  `json:"eventId"`
+	AccountMembershipId *int `json:"accountMembershipId"`
 
 	CreatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-"`
