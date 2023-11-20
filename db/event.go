@@ -13,6 +13,7 @@ type EventRepository interface {
 }
 
 func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
+	// TODO check there are no overlaps
 	query := `insert into event (
 		type,
 		title,

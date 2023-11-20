@@ -19,15 +19,16 @@ import (
 func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
 	from, err := getTime(r, "from")
 	if err != nil {
-		return errors.InvalidRequestFormat{Message: err.Error()}
+		return errors.InvalidRequest{Message: err.Error()}
 	}
 	to, err := getTime(r, "to")
 	if err != nil {
 		log.Println("invalid to format")
-		return errors.InvalidRequestFormat{Message: err.Error()}
+		return errors.InvalidRequest{Message: err.Error()}
 	}
 
 	log.Println("req parsed")
+	log.Println(from, to)
 	events, err := s.store.GetAllEvents(from, to)
 	log.Println("events retrieved from db")
 	if err != nil {

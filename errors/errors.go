@@ -2,11 +2,10 @@ package errors
 
 import (
 	"fmt"
-	"gym_management_system/db"
 )
 
 type RecordNotFound struct {
-	Record   db.Table
+	Record   string
 	Property string
 	Value    interface{}
 }
@@ -16,7 +15,7 @@ func (e RecordNotFound) Error() string {
 }
 
 type DeletedRecord struct {
-	Record   db.Table
+	Record   string
 	Property string
 	Value    interface{}
 }
@@ -40,14 +39,6 @@ func (e InsufficientResources) Error() string {
 	return fmt.Sprintf("insufficient resources")
 }
 
-type EntryError struct {
-	Message string
-}
-
-func (e EntryError) Error() string {
-	return e.Message
-}
-
 type PermissionDenied struct {
 	Id int
 }
@@ -56,10 +47,10 @@ func (e PermissionDenied) Error() string {
 	return fmt.Sprintf("permission denied")
 }
 
-type InvalidRequestFormat struct {
+type InvalidRequest struct {
 	Message string
 }
 
-func (e InvalidRequestFormat) Error() string {
+func (e InvalidRequest) Error() string {
 	return fmt.Sprintf("invalid request format: %s", e.Message)
 }

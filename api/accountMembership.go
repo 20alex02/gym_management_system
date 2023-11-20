@@ -37,7 +37,7 @@ func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string]int{"createdId": id})
+	return writeJSON(w, http.StatusCreated, map[string]int{"createdId": id})
 }
 
 func (s *Server) handleGetAccountMemberships(w http.ResponseWriter, r *http.Request) error {

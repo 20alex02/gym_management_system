@@ -2,6 +2,7 @@ package db
 
 import (
 	customErr "gym_management_system/errors"
+	"time"
 )
 
 type AccountMembershipRepository interface {
@@ -21,41 +22,21 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 	if err != nil {
 		return 0, err
 	}
-	//query := `select (deleted_at, credit) from account where id = $1`
-	//var deletedAt *time.Time
-	//var credit int
-	//err = tx.QueryRow(query, m.AccountId).Scan(&deletedAt, &credit)
-	//if err != nil {
-	//	if errors.Is(err, sql.ErrNoRows) {
-	//		return 0, customErr.RecordNotFound{Record: "account", Property: "id", Value: m.AccountId}
-	//	}
-	//	return 0, err
-	//}
-	//if deletedAt != nil {
-	//	return 0, customErr.DeletedRecord{Record: "account", Property: "id", Value: m.AccountId}
-	//}
 
 	membership := Membership{}
 	err = checkRecord(tx, MEMBERSHIP, m.MembershipId, &membership)
 	if err != nil {
 		return 0, err
 	}
-	//var price int
-	//query = `select (deleted_at, price) from membership where id = $1`
-	//err = tx.QueryRow(query, m.MembershipId).Scan(&deletedAt, &price)
-	//if err != nil {
-	//	if errors.Is(err, sql.ErrNoRows) {
-	//		return 0, customErr.RecordNotFound{Record: "membership", Property: "id", Value: m.MembershipId}
-	//	}
-	//	return 0, err
-	//}
-	//if deletedAt != nil {
-	//	return 0, customErr.DeletedRecord{Record: "account", Property: "id", Value: m.AccountId}
-	//}
 
 	if account.Credit < membership.Price {
 		return 0, customErr.InsufficientResources{}
 	}
+
+	if m.ValidFrom.Before(time.Now()) || time.Duration(membership.DurationDays)*24*time.Hour != m.ValidTo.Sub(m.ValidFrom) {
+		return 0, customErr.InvalidRequest{Message: "invalid membership validity interval"}
+	}
+
 	account.Credit -= membership.Price
 	query := `update account set credit = $1 where id = $2`
 	_, err = tx.Exec(query, account.Credit, account.Id)

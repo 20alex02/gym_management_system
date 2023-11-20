@@ -8,7 +8,8 @@ import (
 type EntryRepository interface {
 	CreateEntry(e *Entry) (int, error)
 	//GetEntryById(id int) (*Entry, error)
-	//GetAllEntriesByAccountId(id int) (*[]Entry, error)
+	GetAccountEntries(accountId int) (*[]Entry, error)
+	GetEventEntries(eventId int) (*[]Entry, error)
 	DeleteEntry(id int) error
 }
 
@@ -25,10 +26,10 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 		return 0, err
 	}
 	if event.Start.Before(time.Now()) {
-		return 0, errors.EntryError{Message: "event already started"}
+		return 0, errors.InvalidRequest{Message: "event already started"}
 	}
 	if event.Capacity < 1 {
-		return 0, errors.EntryError{Message: "full capacity"}
+		return 0, errors.InvalidRequest{Message: "full capacity"}
 	}
 	query := `update event set capacity = $1 where id = $2`
 	_, err = tx.Exec(query, event.Capacity+1, event.Id)
@@ -42,7 +43,11 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 		return 0, err
 	}
 
-	if e.AccountMembershipId == nil {
+	query = `select deleted_at from entry where account_id = $1 and event_id = $2`
+	var deletedAt *time.Time
+	err = tx.QueryRow(query, account.Id, event.Id).Scan(&deletedAt)
+
+	if e.AccountMembershipId != nil {
 		if account.Credit < event.Price {
 			return 0, errors.InsufficientResources{}
 		}
@@ -58,7 +63,7 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			return 0, err
 		}
 		if event.Start.Before(accountMembership.ValidFrom) || event.End.After(accountMembership.ValidTo) {
-			return 0, errors.EntryError{Message: "event does not occur within membership validity"}
+			return 0, errors.InvalidRequest{Message: "event does not occur within membership validity"}
 		}
 		if accountMembership.Entries < 1 {
 			return 0, errors.InsufficientResources{}
@@ -70,7 +75,7 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			return 0, err
 		}
 		if event.Type != membership.Type && membership.Type != ALL {
-			return 0, errors.EntryError{Message: "invalid membership type"}
+			return 0, errors.InvalidRequest{Message: "invalid membership type"}
 		}
 		query := `update account_membership set entries = $1 where id = $2`
 		_, err = tx.Exec(query, accountMembership.Entries-1, accountMembership.Id)
@@ -107,18 +112,31 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 //	return entry, nil
 //}
 
-//func (s *PostgresStore) GetAllEntriesByAccountId(id int) (*[]Entry, error) {
-//	query := `select * from entry where account_id = $1`
-//	rows, err := s.Db.Query(query, id)
-//	if err != nil {
-//		return nil, err
-//	}
-//	entries := &[]Entry{}
-//	if err := scanRows(rows, entries); err != nil {
-//		return nil, err
-//	}
-//	return entries, nil
-//}
+func (s *PostgresStore) GetAccountEntries(accountId int) (*[]Entry, error) {
+	query := `select * from entry where account_id = $1 and deleted_at is null`
+	rows, err := s.Db.Query(query, accountId)
+	if err != nil {
+		return nil, err
+	}
+	entries := &[]Entry{}
+	if err := scanRows(rows, entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (s *PostgresStore) GetEventEntries(eventId int) (*[]Entry, error) {
+	query := `select * from entry where event_id = $1 and deleted_at is null`
+	rows, err := s.Db.Query(query, eventId)
+	if err != nil {
+		return nil, err
+	}
+	entries := &[]Entry{}
+	if err := scanRows(rows, entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
 
 func (s *PostgresStore) DeleteEntry(id int) error {
 	tx, err := s.Db.Begin()
@@ -138,7 +156,7 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 		return err
 	}
 	if event.Start.Before(time.Now()) {
-		return errors.EntryError{Message: "event already started"}
+		return errors.InvalidRequest{Message: "event already started"}
 	}
 	account := Account{}
 	err = checkRecord(tx, ACCOUNT, entry.AccountId, &account)

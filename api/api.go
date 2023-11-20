@@ -47,15 +47,15 @@ func (s *Server) Run() {
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
 	authRouter.Use(withJWTAuth)
 
-	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleCreateEntry)).Methods("POST")
-	//authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")
-	authRouter.HandleFunc("/events/{eventId}/entries/{entryId}", makeHTTPHandleFunc(s.handleDeleteEntry)).Methods("DELETE")
-	authRouter.HandleFunc("/memberships/{membershipId}/purchase", makeHTTPHandleFunc(s.handleCreateAccountMembership)).Methods("POST")
 	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleGetAccount)).Methods("GET")
-	//authRouter.HandleFunc("/account", makeHTTPHandleFunc(handleModifyAccountDetails)).Methods("PUT")
+	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleUpdateAccount)).Methods("PUT")
 	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleDeleteAccount)).Methods("DELETE")
 	authRouter.HandleFunc("/account/memberships", makeHTTPHandleFunc(s.handleGetAccountMemberships)).Methods("GET")
-	//authRouter.HandleFunc("/account/entries", makeHTTPHandleFunc(s.handleGetAccountEntries)).Methods("GET")
+	authRouter.HandleFunc("/account/entries", makeHTTPHandleFunc(s.handleGetAccountEntries)).Methods("GET")
+	authRouter.HandleFunc("/memberships/{membershipId}/purchase", makeHTTPHandleFunc(s.handleCreateAccountMembership)).Methods("POST")
+	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleCreateEntry)).Methods("POST")
+	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")
+	authRouter.HandleFunc("/entries/{entryId}", makeHTTPHandleFunc(s.handleDeleteEntry)).Methods("DELETE")
 
 	// Admin Endpoints with JWT authentication
 	//adminRouter := apiRouter.PathPrefix("/admin").Subrouter()
@@ -65,30 +65,7 @@ func (s *Server) Run() {
 	//adminRouter.HandleFunc("/events/{eventId}", makeHTTPHandleFunc(handleDeleteEvent)).Methods("DELETE")
 	//adminRouter.HandleFunc("/memberships", makeHTTPHandleFunc(handleCreateMembership)).Methods("POST")
 	//adminRouter.HandleFunc("/memberships/{membershipId}", makeHTTPHandleFunc(handleDeleteMembership)).Methods("DELETE")
-	/*
-		// Start the server
-		//http.Handle("/", r)
-		//http.ListenAndServe(":8080", r)
 
-
-		//router := mux.NewRouter()
-		//apiRouter := router.PathPrefix("/api").Subrouter()
-
-		//router.HandleFunc("/login", makeHTTPHandleFunc(s.handleLogin))
-		//apiRouter.HandleFunc("/sign-up", makeHTTPHandleFunc(s.handleCreateAccount))
-		//apiRouter.HandleFunc("/accounts", makeHTTPHandleFunc(s.handleGetAccounts))
-		//apiRouter.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleAccountById))
-
-		//router.HandleFunc("/account/{id}/memberships", makeHTTPHandleFunc(s.handleGetAccountMemberships))
-		// get all available, create new
-		//router.HandleFunc("/memberships", makeHTTPHandleFunc(s.handleMemberships))
-		// get all
-		//router.HandleFunc("/events", makeHTTPHandleFunc(s.handleEvents))
-		//router.HandleFunc("/event", makeHTTPHandleFunc(s.handleCreateEvent))
-		//router.HandleFunc("/event/{id}", makeHTTPHandleFunc(s.handleGetEvent))
-		// create delete
-		//router.HandleFunc("/event/{id}/entry", makeHTTPHandleFunc(s.handleEntry))
-	*/
 	log.Println("JSON API server running on port: ", s.listenAddr)
 
 	if err := http.ListenAndServe(s.listenAddr, r); err != nil {
@@ -100,7 +77,10 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 	var status int
 	var errorMessage string
 	switch {
-	case errors.As(e, &customErr.ConflictingRecord{}), errors.As(e, &customErr.InvalidRequestFormat{}):
+	case errors.As(e, &customErr.ConflictingRecord{}),
+		errors.As(e, &customErr.InvalidRequest{}),
+		errors.As(e, &customErr.InvalidRequest{}),
+		errors.As(e, &customErr.InsufficientResources{}):
 		status = http.StatusBadRequest
 	case errors.As(e, &customErr.PermissionDenied{}):
 		status = http.StatusForbidden
@@ -110,6 +90,7 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 		status = http.StatusInternalServerError
 		errorMessage = "unknown error"
 	}
+	log.Println(e)
 	if errorMessage == "" {
 		errorMessage = e.Error()
 	}
@@ -138,11 +119,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) error {
 func getId(r *http.Request, key string) (int, error) {
 	idStr, ok := mux.Vars(r)[key]
 	if !ok {
-		return 0, customErr.InvalidRequestFormat{Message: "missing " + key}
+		return 0, customErr.InvalidRequest{Message: "missing " + key}
 	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return id, customErr.InvalidRequestFormat{Message: err.Error()}
+		return id, customErr.InvalidRequest{Message: err.Error()}
 	}
 	return id, nil
 }

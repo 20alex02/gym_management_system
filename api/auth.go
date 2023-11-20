@@ -71,6 +71,20 @@ func withJWTAuth(next http.Handler) http.Handler {
 	})
 }
 
+func newAccount(firstName, lastName, email, password string) (*db.Account, error) {
+	encPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	return &db.Account{
+		FirstName:         firstName,
+		LastName:          lastName,
+		Email:             email,
+		EncryptedPassword: string(encPw),
+	}, nil
+}
+
 /*
 func Refresh(w http.ResponseWriter, r *http.Request) {
 	// (BEGIN) The code until this point is the same as the first part of the `Welcome` route

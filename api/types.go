@@ -12,11 +12,18 @@ type CreateAccountRequest struct {
 	Password  string `json:"password"`
 }
 
+type UpdateAccountRequest struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Credit    int    `json:"credit"`
+}
+
 type CreateAccountMembershipRequest struct {
-	MembershipId int       `json:"membershipId"`
-	ValidFrom    time.Time `json:"validFrom"`
-	ValidTo      time.Time `json:"validTo"`
-	Entries      int       `json:"entries"`
+	ValidFrom time.Time `json:"validFrom"`
+	ValidTo   time.Time `json:"validTo"`
+	Entries   int       `json:"entries"`
 }
 
 type CreateEntryRequest struct {

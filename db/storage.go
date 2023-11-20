@@ -146,7 +146,7 @@ func checkRecord[T any](tx *sql.Tx, table Table, id int, record *T) error {
 	row := tx.QueryRow(query, id)
 	if err := scanRow(row, record); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return customErr.RecordNotFound{Record: table, Property: "id", Value: id}
+			return customErr.RecordNotFound{Record: string(table), Property: "id", Value: id}
 		}
 		return err
 	}
@@ -154,7 +154,7 @@ func checkRecord[T any](tx *sql.Tx, table Table, id int, record *T) error {
 	v := reflect.ValueOf(record).Elem()
 	deletedAtField := v.FieldByName("DeletedAt")
 	if deletedAtField.IsValid() && !deletedAtField.IsNil() {
-		return customErr.DeletedRecord{Record: table, Property: "id", Value: id}
+		return customErr.DeletedRecord{Record: string(table), Property: "id", Value: id}
 	}
 	return nil
 }

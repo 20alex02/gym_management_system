@@ -1,7 +1,6 @@
 package db
 
 import (
-	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
@@ -79,18 +78,4 @@ type Entry struct {
 
 	CreatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-"`
-}
-
-func NewAccount(firstName, lastName, email, password string) (*Account, error) {
-	encPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Account{
-		FirstName:         firstName,
-		LastName:          lastName,
-		Email:             email,
-		EncryptedPassword: string(encPw),
-	}, nil
 }

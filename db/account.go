@@ -11,7 +11,7 @@ type AccountRepository interface {
 	GetAccountById(id int) (*Account, error)
 	GetAccountByEmail(email string) (*Account, error)
 	//GetAllAccounts() (*[]Account, error)
-	//UpdateAccount(a *Account) error
+	UpdateAccount(a *Account) error
 	DeleteAccount(id int) error
 }
 
@@ -47,12 +47,12 @@ func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
 	account := &Account{}
 	if err := scanRow(row, account); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, customErr.RecordNotFound{Record: "account", Property: "id", Value: id}
+			return nil, customErr.RecordNotFound{Record: string(ACCOUNT), Property: "id", Value: id}
 		}
 		return nil, err
 	}
 	if account.DeletedAt != nil {
-		return nil, customErr.DeletedRecord{Record: "account", Property: "id", Value: id}
+		return nil, customErr.DeletedRecord{Record: string(ACCOUNT), Property: "id", Value: id}
 	}
 	return account, nil
 }
@@ -63,12 +63,12 @@ func (s *PostgresStore) GetAccountByEmail(email string) (*Account, error) {
 	account := &Account{}
 	if err := scanRow(row, account); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, customErr.RecordNotFound{Record: "account", Property: "email", Value: email}
+			return nil, customErr.RecordNotFound{Record: string(ACCOUNT), Property: "email", Value: email}
 		}
 		return nil, err
 	}
 	if account.DeletedAt != nil {
-		return nil, customErr.DeletedRecord{Record: "account", Property: "email", Value: email}
+		return nil, customErr.DeletedRecord{Record: string(ACCOUNT), Property: "email", Value: email}
 	}
 	return account, nil
 }
@@ -90,9 +90,19 @@ func (s *PostgresStore) GetAllAccounts() (*[]Account, error) {
 	return accounts, nil
 }
 */
-/*
-// TODO update acc info or update credit
+
 func (s *PostgresStore) UpdateAccount(a *Account) error {
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrRollback(tx, &err)
+
+	account := Account{}
+	err = checkRecord(tx, ACCOUNT, a.Id, &account)
+	if err != nil {
+		return err
+	}
 	query := `update account set
                    first_name = $1,
                    last_name = $2,
@@ -100,10 +110,12 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
                    email = $4,
                    credit = $5
                where id = $6`
-	_, err := s.Db.Exec(query, a.FirstName, a.LastName, a.EncryptedPassword, a.Email, a.Credit)
+	_, err = tx.Exec(query, a.FirstName, a.LastName, a.EncryptedPassword, a.Email, a.Credit, a.Id)
+	if isDuplicateKeyError(err) {
+		return customErr.ConflictingRecord{Property: "email"}
+	}
 	return err
 }
-*/
 
 func (s *PostgresStore) DeleteAccount(id int) error {
 	tx, err := s.Db.Begin()
@@ -117,18 +129,7 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	if err != nil {
 		return err
 	}
-	//var deletedAt *time.Time
-	//query := `select deleted_at from account where id = $1`
-	//err = tx.QueryRow(query, id).Scan(&deletedAt)
-	//if err != nil {
-	//	if errors.Is(err, sql.ErrNoRows) {
-	//		return customErr.RecordNotFound{Record: "account", Property: "id", Value: id}
-	//	}
-	//	return err
-	//}
-	//if deletedAt != nil {
-	//	return customErr.DeletedRecord{Record: "account", Property: "id", Value: id}
-	//}
+
 	query := `update account set deleted_at = current_timestamp where id = $1`
 	_, err = tx.Exec(query, id)
 	if err != nil {

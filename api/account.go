@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"gym_management_system/db"
 	"gym_management_system/errors"
 	"log"
 	"net/http"
@@ -16,7 +15,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	account, err := db.NewAccount(req.FirstName, req.LastName, req.Email, req.Password)
+	account, err := newAccount(req.FirstName, req.LastName, req.Email, req.Password)
 	if err != nil {
 		return err
 	}
@@ -25,7 +24,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string]int{"createdId": id})
+	return writeJSON(w, http.StatusCreated, map[string]int{"createdId": id})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
@@ -87,6 +86,31 @@ func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) err
 		return errors.PermissionDenied{}
 	}
 	if err := s.store.DeleteAccount(claims.Id); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+}
+
+func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := r.Context().Value("claims").(*Claims)
+	if !ok {
+		log.Println("cannot get claims")
+		return errors.PermissionDenied{}
+	}
+
+	req := new(UpdateAccountRequest)
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+	account, err := newAccount(req.FirstName, req.LastName, req.Email, req.Password)
+	if err != nil {
+		return err
+	}
+	account.Id = claims.Id
+	account.Credit = req.Credit
+
+	if err := s.store.UpdateAccount(account); err != nil {
 		return err
 	}
 
