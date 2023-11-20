@@ -42,7 +42,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 		return errors.PermissionDenied{}
 	}
 
-	expTime := time.Now().Add(time.Minute * 15)
+	expTime := time.Now().Add(time.Minute * 1)
 	token, err := createJWT(acc, expTime)
 	if err != nil {
 		return err

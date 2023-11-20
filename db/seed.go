@@ -168,6 +168,7 @@ func (s *PostgresStore) createEventTable() error {
 		start_time timestamp,
 		end_time timestamp,
 		capacity int,
+		participants int default 0,
 		price int,
 		created_at timestamp default current_timestamp,
 		deleted_at timestamp default null

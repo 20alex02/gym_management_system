@@ -79,7 +79,6 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 	switch {
 	case errors.As(e, &customErr.ConflictingRecord{}),
 		errors.As(e, &customErr.InvalidRequest{}),
-		errors.As(e, &customErr.InvalidRequest{}),
 		errors.As(e, &customErr.InsufficientResources{}):
 		status = http.StatusBadRequest
 	case errors.As(e, &customErr.PermissionDenied{}):

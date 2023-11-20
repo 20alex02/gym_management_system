@@ -22,8 +22,6 @@ type UpdateAccountRequest struct {
 
 type CreateAccountMembershipRequest struct {
 	ValidFrom time.Time `json:"validFrom"`
-	ValidTo   time.Time `json:"validTo"`
-	Entries   int       `json:"entries"`
 }
 
 type CreateEntryRequest struct {

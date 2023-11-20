@@ -2,7 +2,6 @@ package db
 
 import (
 	customErr "gym_management_system/errors"
-	"time"
 )
 
 type AccountMembershipRepository interface {
@@ -30,13 +29,9 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 	}
 
 	if account.Credit < membership.Price {
-		return 0, customErr.InsufficientResources{}
+		err = customErr.InsufficientResources{}
+		return 0, err
 	}
-
-	if m.ValidFrom.Before(time.Now()) || time.Duration(membership.DurationDays)*24*time.Hour != m.ValidTo.Sub(m.ValidFrom) {
-		return 0, customErr.InvalidRequest{Message: "invalid membership validity interval"}
-	}
-
 	account.Credit -= membership.Price
 	query := `update account set credit = $1 where id = $2`
 	_, err = tx.Exec(query, account.Credit, account.Id)
@@ -44,6 +39,8 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 		return 0, err
 	}
 
+	m.ValidTo = m.ValidFrom.AddDate(0, 0, membership.DurationDays)
+	m.Entries = membership.Entries
 	query = `insert into account_membership (
 			account_id,
 			membership_id,

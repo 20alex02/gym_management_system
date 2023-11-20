@@ -15,7 +15,7 @@ func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Re
 		return errors.PermissionDenied{}
 	}
 
-	// TODO validation
+	// TODO validation, valid from < today
 	req := new(CreateAccountMembershipRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
@@ -29,8 +29,6 @@ func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Re
 		AccountId:    claims.Id,
 		MembershipId: membershipId,
 		ValidFrom:    req.ValidFrom,
-		ValidTo:      req.ValidTo,
-		Entries:      req.Entries,
 	}
 	id, err := s.store.CreateAccountMembership(membership)
 	if err != nil {

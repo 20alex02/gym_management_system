@@ -52,5 +52,5 @@ type InvalidRequest struct {
 }
 
 func (e InvalidRequest) Error() string {
-	return fmt.Sprintf("invalid request format: %s", e.Message)
+	return e.Message
 }

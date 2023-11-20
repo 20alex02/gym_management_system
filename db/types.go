@@ -35,13 +35,14 @@ type Account struct {
 }
 
 type Event struct {
-	Id       int       `json:"id"`
-	Type     EventType `json:"type"`
-	Title    string    `json:"title"`
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
-	Capacity int       `json:"capacity"`
-	Price    int       `json:"price"`
+	Id           int       `json:"id"`
+	Type         EventType `json:"type"`
+	Title        string    `json:"title"`
+	Start        time.Time `json:"start"`
+	End          time.Time `json:"end"`
+	Capacity     int       `json:"capacity"`
+	Participants int       `json:"participants"`
+	Price        int       `json:"price"`
 
 	CreatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-"`

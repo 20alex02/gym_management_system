@@ -1,7 +1,9 @@
 package db
 
 import (
-	"gym_management_system/errors"
+	"database/sql"
+	"errors"
+	customErr "gym_management_system/errors"
 	"time"
 )
 
@@ -25,31 +27,36 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if event.Start.Before(time.Now()) {
-		return 0, errors.InvalidRequest{Message: "event already started"}
-	}
-	if event.Capacity < 1 {
-		return 0, errors.InvalidRequest{Message: "full capacity"}
-	}
-	query := `update event set capacity = $1 where id = $2`
-	_, err = tx.Exec(query, event.Capacity+1, event.Id)
-	if err != nil {
-		return 0, err
-	}
-
 	account := Account{}
 	err = checkRecord(tx, ACCOUNT, e.AccountId, &account)
 	if err != nil {
 		return 0, err
 	}
 
-	query = `select deleted_at from entry where account_id = $1 and event_id = $2`
-	var deletedAt *time.Time
-	err = tx.QueryRow(query, account.Id, event.Id).Scan(&deletedAt)
+	query := `select 1 from entry where account_id = $1 and event_id = $2 and deleted_at is null`
+	var result int
+	err = tx.QueryRow(query, account.Id, event.Id).Scan(&result)
+	if err == nil {
+		err = customErr.InvalidRequest{Message: "already registered for the event"}
+		return 0, err
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
 
-	if e.AccountMembershipId != nil {
+	if event.Start.Before(time.Now()) {
+		err = customErr.InvalidRequest{Message: "event already started"}
+		return 0, err
+	}
+	if event.Participants == event.Capacity {
+		err = customErr.InvalidRequest{Message: "full capacity"}
+		return 0, err
+	}
+
+	if e.AccountMembershipId == nil {
 		if account.Credit < event.Price {
-			return 0, errors.InsufficientResources{}
+			err = customErr.InsufficientResources{}
+			return 0, err
 		}
 		query := `update account set credit = $1 where id = $2`
 		_, err = tx.Exec(query, account.Credit-event.Price, account.Id)
@@ -63,10 +70,12 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			return 0, err
 		}
 		if event.Start.Before(accountMembership.ValidFrom) || event.End.After(accountMembership.ValidTo) {
-			return 0, errors.InvalidRequest{Message: "event does not occur within membership validity"}
+			err = customErr.InvalidRequest{Message: "event does not occur within membership validity"}
+			return 0, err
 		}
 		if accountMembership.Entries < 1 {
-			return 0, errors.InsufficientResources{}
+			err = customErr.InsufficientResources{}
+			return 0, err
 		}
 
 		membership := Membership{}
@@ -75,13 +84,19 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			return 0, err
 		}
 		if event.Type != membership.Type && membership.Type != ALL {
-			return 0, errors.InvalidRequest{Message: "invalid membership type"}
+			err = customErr.InvalidRequest{Message: "invalid membership type"}
+			return 0, err
 		}
 		query := `update account_membership set entries = $1 where id = $2`
 		_, err = tx.Exec(query, accountMembership.Entries-1, accountMembership.Id)
 		if err != nil {
 			return 0, err
 		}
+	}
+	query = `update event set participants = $1 where id = $2`
+	_, err = tx.Exec(query, event.Participants+1, event.Id)
+	if err != nil {
+		return 0, err
 	}
 
 	query = `insert into entry (
@@ -156,7 +171,12 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 		return err
 	}
 	if event.Start.Before(time.Now()) {
-		return errors.InvalidRequest{Message: "event already started"}
+		err = customErr.InvalidRequest{Message: "event already started"}
+		return err
+	}
+	if event.End.Before(time.Now()) {
+		err = customErr.InvalidRequest{Message: "event already ended"}
+		return err
 	}
 	account := Account{}
 	err = checkRecord(tx, ACCOUNT, entry.AccountId, &account)
@@ -169,19 +189,19 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 		return err
 	}
 
-	query := `update event set capacity = $1 where id = $2`
-	_, err = s.Db.Exec(query, event.Capacity+1, event.Id)
+	query := `update event set participants = $1 where id = $2`
+	_, err = s.Db.Exec(query, event.Participants-1, event.Id)
 	if err != nil {
 		return err
 	}
 	if entry.AccountMembershipId == nil {
-		query := `update account set credit = $1 where id = $2`
+		query = `update account set credit = $1 where id = $2`
 		_, err = s.Db.Exec(query, account.Credit+event.Price, account.Id)
 		if err != nil {
 			return err
 		}
 	} else {
-		query := `update account_membership set entries = $1 where id = $2`
+		query = `update account_membership set entries = $1 where id = $2`
 		_, err = s.Db.Exec(query, membership.Entries+1, membership.Id)
 		if err != nil {
 			return err

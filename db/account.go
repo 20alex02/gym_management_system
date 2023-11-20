@@ -112,7 +112,8 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
                where id = $6`
 	_, err = tx.Exec(query, a.FirstName, a.LastName, a.EncryptedPassword, a.Email, a.Credit, a.Id)
 	if isDuplicateKeyError(err) {
-		return customErr.ConflictingRecord{Property: "email"}
+		err = customErr.ConflictingRecord{Property: "email"}
+		return err
 	}
 	return err
 }
