@@ -1,6 +1,8 @@
 package db
 
 import (
+	"database/sql"
+	"errors"
 	customErr "gym_management_system/errors"
 	"time"
 )
@@ -8,13 +10,29 @@ import (
 type EventRepository interface {
 	CreateEvent(e *Event) (int, error)
 	GetAllEvents(from time.Time, to time.Time) (*[]Event, error)
-	//GetEventById(id int) (*Event, error)
-	//UpdateEvent(e *Event) error
+	GetAccountEvents(accountId int) (*[]EventWithEntryId, error)
 	DeleteEvent(id int) error
 }
 
 func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
-	// TODO check there are no overlaps
+	tx, err := s.Db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer commitOrRollback(tx, &err)
+
+	overlapQuery := `select id from event
+		where ($1, $2) overlaps (start_time, end_time) and deleted_at is null`
+	var overlappingEventID int
+	err = tx.QueryRow(overlapQuery, e.Start, e.End).Scan(&overlappingEventID)
+	if err == nil {
+		err = customErr.InvalidRequest{Message: "overlapping events"}
+		return 0, err
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
+
 	query := `insert into event (
 		type,
 		title,
@@ -23,9 +41,8 @@ func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 		capacity,
         price
 	) values ($1, $2, $3, $4, $5, $6) returning id`
-
 	var id int
-	err := s.Db.QueryRow(
+	err = tx.QueryRow(
 		query,
 		e.Type,
 		e.Title,
@@ -33,10 +50,7 @@ func (s *PostgresStore) CreateEvent(e *Event) (int, error) {
 		e.End,
 		e.Capacity,
 		e.Price).Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+	return id, err
 }
 
 func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, error) {
@@ -57,35 +71,28 @@ func (s *PostgresStore) GetAllEvents(from time.Time, to time.Time) (*[]Event, er
 	return events, nil
 }
 
-//func (s *PostgresStore) GetEventById(id int) (*Event, error) {
-//	query := `select * from event where id = $1`
-//	row := s.Db.QueryRow(query, id)
-//	event := &Event{}
-//	if err := scanRow(row, event); err != nil {
-//		if errors.Is(err, sql.ErrNoRows) {
-//			return nil, customErr.RecordNotFound{Record: "event", Property: "id", Value: id}
-//		}
-//		return nil, err
-//	}
-//	if event.DeletedAt != nil {
-//		return nil, customErr.DeletedRecord{Record: "event", Property: "id", Value: id}
-//	}
-//	return event, nil
-//}
-
-//func (s *PostgresStore) UpdateEvent(e *Event) error {
-//	query := `update event set
-//                 type = $1,
-//                 title = $2,
-//            	 start_time = $3,
-//            	 end_time = $4,
-//            	 capacity = $5,
-//            	 price = $6
-//             where id = $7`
-//
-//	_, errors := s.Db.Exec(query, e.Type, e.Title, e.Start, e.End, e.Capacity, e.Price, e.Id)
-//	return errors
-//}
+func (s *PostgresStore) GetAccountEvents(accountId int) (*[]EventWithEntryId, error) {
+	query := `select event.*, entry.id as entry_id from entry 
+    inner join event on entry.event_id = event.id
+    where entry.account_id = $1 and entry.deleted_at is null`
+	rows, err := s.Db.Query(query, accountId)
+	if err != nil {
+		return nil, err
+	}
+	events := &[]EventWithEntryId{}
+	err = scanRows(rows, events)
+	return events, err
+	//query := `select * from entry where account_id = $1 and deleted_at is null`
+	//rows, err := s.Db.Query(query, accountId)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//entries := &[]Entry{}
+	//if err := scanRows(rows, entries); err != nil {
+	//	return nil, err
+	//}
+	//return entries, nil
+}
 
 func (s *PostgresStore) DeleteEvent(id int) error {
 	tx, err := s.Db.Begin()
@@ -93,17 +100,24 @@ func (s *PostgresStore) DeleteEvent(id int) error {
 		return err
 	}
 	defer commitOrRollback(tx, &err)
+
+	now := time.Now()
 	event := Event{}
 	err = getRecord(tx, EVENT, id, &event)
 	if err != nil {
 		return err
 	}
-	if event.Start.Before(time.Now()) {
-		err = customErr.InvalidRequest{Message: "event already started"}
+	if event.Start.Before(now) && event.End.After(now) {
+		err = customErr.InvalidRequest{Message: "event in progress"}
 		return err
 	}
-	if event.End.Before(time.Now()) {
-		err = customErr.InvalidRequest{Message: "event already ended"}
+	if event.End.Before(now) {
+		query := `update entry set deleted_at = current_timestamp
+             where event_id = $1 and deleted_at is null`
+		_, err = tx.Exec(query, id)
+		query = `update event set deleted_at = current_timestamp
+             where id = $1 and deleted_at is null`
+		_, err = tx.Exec(query, id)
 		return err
 	}
 	query := `select * from entry where event_id = $1 and deleted_at is null`
@@ -141,6 +155,9 @@ func (s *PostgresStore) DeleteEvent(id int) error {
 			}
 		}
 	}
+	query = `update entry set deleted_at = current_timestamp
+             where event_id = $1 and deleted_at is null`
+	_, err = tx.Exec(query, id)
 	query = `update event set deleted_at = current_timestamp
              where id = $1 and deleted_at is null`
 	_, err = tx.Exec(query, id)

@@ -69,8 +69,8 @@ type Membership struct {
 
 type AccountMembership struct {
 	Id           int       `json:"id"`
-	AccountId    int       `json:"accountId"`
-	MembershipId int       `json:"membershipId"`
+	AccountId    int       `json:"-"`
+	MembershipId int       `json:"-"`
 	ValidFrom    time.Time `json:"validFrom"`
 	ValidTo      time.Time `json:"validTo"`
 	Entries      int       `json:"entries"`
@@ -87,4 +87,40 @@ type Entry struct {
 
 	CreatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-"`
+}
+
+type EventWithEntryId struct {
+	Id           int       `json:"id"`
+	Type         EventType `json:"type"`
+	Title        string    `json:"title"`
+	Start        time.Time `json:"start"`
+	End          time.Time `json:"end"`
+	Capacity     int       `json:"capacity"`
+	Participants int       `json:"participants"`
+	Price        int       `json:"price"`
+
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
+
+	EntryId int `json:"entryId"`
+}
+
+type EventEntry struct {
+	Id        int    `json:"id"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+type AccountMembershipWithType struct {
+	Id           int       `json:"id"`
+	AccountId    int       `json:"-"`
+	MembershipId int       `json:"-"`
+	ValidFrom    time.Time `json:"validFrom"`
+	ValidTo      time.Time `json:"validTo"`
+	Entries      int       `json:"entries"`
+
+	CreatedAt time.Time  `json:"-"`
+	DeletedAt *time.Time `json:"-"`
+
+	Type EventType `json:"type"`
 }

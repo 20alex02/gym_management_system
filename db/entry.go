@@ -9,10 +9,8 @@ import (
 
 type EntryRepository interface {
 	CreateEntry(e *Entry) (int, error)
-	//GetEntryById(id int) (*Entry, error)
-	GetAccountEntries(accountId int) (*[]Entry, error)
-	GetEventEntries(eventId int) (*[]Entry, error)
-	DeleteEntry(id int) error
+	GetEventEntries(eventId int) (*[]EventEntry, error)
+	DeleteEntry(id, accountId int) error
 }
 
 func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
@@ -44,6 +42,10 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 		return 0, err
 	}
 
+	if event.End.Before(time.Now()) {
+		err = customErr.InvalidRequest{Message: "event already ended"}
+		return 0, err
+	}
 	if event.Start.Before(time.Now()) {
 		err = customErr.InvalidRequest{Message: "event already started"}
 		return 0, err
@@ -118,43 +120,21 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 	return id, nil
 }
 
-//func (s *PostgresStore) GetEntryById(id int) (*Entry, error) {
-//	query := `select * from entry where id = $1`
-//	row := s.Db.QueryRow(query, id)
-//	entry := &Entry{}
-//	if err := scanRow(row, entry); err != nil {
-//		return nil, err
-//	}
-//	return entry, nil
-//}
-
-func (s *PostgresStore) GetAccountEntries(accountId int) (*[]Entry, error) {
-	query := `select * from entry where account_id = $1 and deleted_at is null`
-	rows, err := s.Db.Query(query, accountId)
-	if err != nil {
-		return nil, err
-	}
-	entries := &[]Entry{}
-	if err := scanRows(rows, entries); err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
-
-func (s *PostgresStore) GetEventEntries(eventId int) (*[]Entry, error) {
-	query := `select * from entry where event_id = $1 and deleted_at is null`
+func (s *PostgresStore) GetEventEntries(eventId int) (*[]EventEntry, error) {
+	query := `select entry.id, account.first_name, account.last_name from entry 
+    join account on entry.account_id = account.id where entry.event_id = $1 and entry.deleted_at is null`
 	rows, err := s.Db.Query(query, eventId)
 	if err != nil {
 		return nil, err
 	}
-	entries := &[]Entry{}
-	if err := scanRows(rows, entries); err != nil {
+	entries := &[]EventEntry{}
+	if err = scanRows(rows, entries); err != nil {
 		return nil, err
 	}
 	return entries, nil
 }
 
-func (s *PostgresStore) DeleteEntry(id int) error {
+func (s *PostgresStore) DeleteEntry(id, accountId int) error {
 	tx, err := s.Db.Begin()
 	if err != nil {
 		return err
@@ -165,6 +145,9 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 	err = getRecord(tx, ENTRY, id, &entry)
 	if err != nil {
 		return err
+	}
+	if entry.AccountId != accountId {
+		err = customErr.InvalidRequest{Message: "can not delete"}
 	}
 	event := Event{}
 	err = getRecord(tx, EVENT, entry.EventId, &event)

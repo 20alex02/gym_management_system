@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	// TODO validation
+	// TODO validation --> names have to be 3-30 characters long, email has to be in valid format, password has to contain at least 6 characters of which at least one is lowercase, uppercase, number, special character
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
@@ -49,16 +49,17 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 		return errors.PermissionDenied{}
 	}
 
-	expTime := time.Now().Add(time.Minute * 1)
+	expTime := time.Now().Add(time.Minute * 15)
 	token, err := createJWT(acc, expTime)
 	if err != nil {
 		return err
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   token,
-		Expires: expTime,
+		Name:     "token",
+		Value:    token,
+		Expires:  expTime,
+		HttpOnly: true,
 	})
 
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
@@ -66,8 +67,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 
 func (s *Server) handleLogout(w http.ResponseWriter, _ *http.Request) error {
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Expires: time.Now(),
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HttpOnly: true,
 	})
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
@@ -128,26 +131,3 @@ func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) err
 
 	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
-
-//func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) error {
-//	if r.Method != "GET" {
-//		return fmt.Errorf("method not allowed %s", r.Method)
-//	}
-//	accounts, err := s.store.GetAllAccounts()
-//	if err != nil {
-//		return err
-//	}
-//
-//	return writeJSON(w, http.StatusOK, accounts)
-//}
-
-//func (s *Server) handleAccountById(w http.ResponseWriter, r *http.Request) error {
-//	switch r.Method {
-//	case "GET":
-//		return s.handleGetAccount(w, r)
-//	case "DELETE":
-//		return s.handleDeleteAccount(w, r)
-//	default:
-//		return fmt.Errorf("method not allowed %s", r.Method)
-//	}
-//}

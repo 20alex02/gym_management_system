@@ -54,7 +54,6 @@ func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) error {
-	// todo validation
 	id, err := getId(r, "eventId")
 	if err != nil {
 		return err

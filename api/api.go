@@ -41,7 +41,10 @@ func (s *Server) Run() {
 	apiRouter.HandleFunc("/login", makeHTTPHandleFunc(s.handleLogin)).Methods("POST")
 	apiRouter.HandleFunc("/logout", makeHTTPHandleFunc(s.handleLogout)).Methods("POST")
 	apiRouter.HandleFunc("/events", makeHTTPHandleFunc(s.handleGetEvents)).Methods("GET")
+	apiRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")
 	apiRouter.HandleFunc("/memberships", makeHTTPHandleFunc(s.handleGetMemberships)).Methods("GET")
+
+	// TODO refresh token
 
 	// Authenticated User Endpoints with JWT authentication
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
@@ -51,15 +54,15 @@ func (s *Server) Run() {
 	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleUpdateAccount)).Methods("PUT")
 	authRouter.HandleFunc("/account", makeHTTPHandleFunc(s.handleDeleteAccount)).Methods("DELETE")
 	authRouter.HandleFunc("/account/memberships", makeHTTPHandleFunc(s.handleGetAccountMemberships)).Methods("GET")
-	authRouter.HandleFunc("/account/entries", makeHTTPHandleFunc(s.handleGetAccountEntries)).Methods("GET")
+	authRouter.HandleFunc("/account/events", makeHTTPHandleFunc(s.handleGetAccountEvents)).Methods("GET")
 	authRouter.HandleFunc("/memberships/{membershipId}/purchase", makeHTTPHandleFunc(s.handleCreateAccountMembership)).Methods("POST")
 	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleCreateEntry)).Methods("POST")
-	authRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")
 	authRouter.HandleFunc("/entries/{entryId}", makeHTTPHandleFunc(s.handleDeleteEntry)).Methods("DELETE")
 
 	// Admin Endpoints with JWT authentication
 	adminRouter := apiRouter.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(withJWTAuth)
+	adminRouter.Use(s.isAdmin)
 
 	adminRouter.HandleFunc("/events", makeHTTPHandleFunc(s.handleCreateEvent)).Methods("POST")
 	adminRouter.HandleFunc("/events/{eventId}", makeHTTPHandleFunc(s.handleDeleteEvent)).Methods("DELETE")

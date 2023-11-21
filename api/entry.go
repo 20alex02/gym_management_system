@@ -39,11 +39,16 @@ func (s *Server) handleCreateEntry(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *Server) handleDeleteEntry(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := r.Context().Value("claims").(*Claims)
+	if !ok {
+		log.Println("cannot get claims")
+		return errors.PermissionDenied{}
+	}
 	entryId, err := getId(r, "entryId")
 	if err != nil {
 		return err
 	}
-	if err := s.store.DeleteEntry(entryId); err != nil {
+	if err = s.store.DeleteEntry(entryId, claims.Id); err != nil {
 		return err
 	}
 
@@ -60,19 +65,19 @@ func (s *Server) handleGetEventEntries(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.Entry{"entries": *entries})
+	return writeJSON(w, http.StatusOK, map[string][]db.EventEntry{"entries": *entries})
 }
 
-func (s *Server) handleGetAccountEntries(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleGetAccountEvents(w http.ResponseWriter, r *http.Request) error {
 	claims, ok := r.Context().Value("claims").(*Claims)
 	if !ok {
 		log.Println("cannot get claims")
 		return errors.PermissionDenied{}
 	}
-	entries, err := s.store.GetAccountEntries(claims.Id)
+	events, err := s.store.GetAccountEvents(claims.Id)
 	if err != nil {
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.Entry{"entries": *entries})
+	return writeJSON(w, http.StatusOK, map[string][]db.EventWithEntryId{"events": *events})
 }

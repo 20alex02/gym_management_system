@@ -69,6 +69,32 @@ func withJWTAuth(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) isAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := r.Context().Value("claims").(*Claims)
+		if !ok {
+			log.Println("cannot get claims")
+			writeErrorJSON(w, errors.PermissionDenied{})
+			return
+		}
+
+		account, err := s.store.GetAccountById(claims.Id)
+		if err != nil {
+			log.Println("error getting account:", err)
+			writeErrorJSON(w, errors.PermissionDenied{})
+			return
+		}
+
+		if account.Role != db.ADMIN {
+			log.Println("user is not admin")
+			writeErrorJSON(w, errors.PermissionDenied{})
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 /*
 func Refresh(w http.ResponseWriter, r *http.Request) {
 	// (BEGIN) The code until this point is the same as the first part of the `Welcome` route

@@ -10,7 +10,6 @@ type AccountRepository interface {
 	CreateAccount(a *Account) (int, error)
 	GetAccountById(id int) (*Account, error)
 	GetAccountByEmail(email string) (*Account, error)
-	//GetAllAccounts() (*[]Account, error)
 	UpdateAccount(a *Account) error
 	DeleteAccount(id int) error
 }
@@ -72,24 +71,6 @@ func (s *PostgresStore) GetAccountByEmail(email string) (*Account, error) {
 	}
 	return account, nil
 }
-
-/*
-func (s *PostgresStore) GetAllAccounts() (*[]Account, error) {
-	query := `select * from account where deleted_at is null`
-	rows, err := s.Db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer closeRows(rows)
-	accounts := &[]Account{}
-	err = scanRows(rows, accounts)
-	if err != nil {
-		return nil, err
-	}
-
-	return accounts, nil
-}
-*/
 
 func (s *PostgresStore) UpdateAccount(a *Account) error {
 	tx, err := s.Db.Begin()

@@ -44,10 +44,10 @@ func (s *Server) handleGetAccountMemberships(w http.ResponseWriter, r *http.Requ
 		log.Println("cannot get claims")
 		return errors.PermissionDenied{}
 	}
-	memberships, err := s.store.GetAllAccountMemberships(claims.Id)
+	memberships, err := s.store.GetAccountMemberships(claims.Id)
 	if err != nil {
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.AccountMembership{"memberships": *memberships})
+	return writeJSON(w, http.StatusOK, map[string][]db.AccountMembershipWithType{"memberships": *memberships})
 }

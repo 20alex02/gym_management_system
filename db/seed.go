@@ -214,7 +214,7 @@ func (s *PostgresStore) createAdmin() error {
 		"morgan",
 		string(pw),
 		os.Getenv("ADMIN_EMAIL"),
-		0,
+		100000,
 		ADMIN).Scan(&id)
 	return err
 }

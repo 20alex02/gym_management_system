@@ -6,7 +6,7 @@ import (
 
 type AccountMembershipRepository interface {
 	CreateAccountMembership(m *AccountMembership) (int, error)
-	GetAllAccountMemberships(id int) (*[]AccountMembership, error)
+	GetAccountMemberships(id int) (*[]AccountMembershipWithType, error)
 }
 
 func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, error) {
@@ -63,17 +63,17 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 	return id, nil
 }
 
-func (s *PostgresStore) GetAllAccountMemberships(id int) (*[]AccountMembership, error) {
-	query := `select * from account_membership 
-         where deleted_at is null 
-           and account_id = $1
-           and valid_to >= current_timestamp`
+func (s *PostgresStore) GetAccountMemberships(id int) (*[]AccountMembershipWithType, error) {
+	query := `select account_membership.*, membership.type from account_membership join membership on account_membership.membership_id = membership.id 
+         where account_membership.deleted_at is null 
+           and account_membership.account_id = $1
+           and account_membership.valid_to >= current_timestamp`
 	rows, err := s.Db.Query(query, id)
 	if err != nil {
 		return nil, err
 	}
-	memberships := &[]AccountMembership{}
-	if err := scanRows(rows, memberships); err != nil {
+	memberships := &[]AccountMembershipWithType{}
+	if err = scanRows(rows, memberships); err != nil {
 		return nil, err
 	}
 	return memberships, nil
