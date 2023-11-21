@@ -17,6 +17,11 @@ func validPassword(reqPw, encPw string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(encPw), []byte(reqPw)) == nil
 }
 
+func HashPassword(password string) (string, error) {
+	pw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(pw), err
+}
+
 func createJWT(account *db.Account, exp time.Time) (string, error) {
 	claims := &Claims{
 		Id: account.Id,
@@ -62,20 +67,6 @@ func withJWTAuth(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "claims", claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func newAccount(firstName, lastName, email, password string) (*db.Account, error) {
-	encPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-
-	return &db.Account{
-		FirstName:         firstName,
-		LastName:          lastName,
-		Email:             email,
-		EncryptedPassword: string(encPw),
-	}, nil
 }
 
 /*
@@ -136,35 +127,3 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 */
-
-//func withJWTAuth(handlerFunc http.HandlerFunc, s db.Storage) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		fmt.Println("calling JWT auth middleware")
-//
-//		tokenString := r.Header.Get("x-jwt-token")
-//		token, err := validateJWT(tokenString)
-//		if err != nil || !token.Valid {
-//			writeErrorJSON(w, customErr.PermissionDenied{})
-//			return
-//		}
-//
-//		userID, err := getId(r)
-//		if err != nil {
-//			writeErrorJSON(w, customErr.PermissionDenied{})
-//			return
-//		}
-//		account, err := s.GetAccountByID(userID)
-//		if err != nil {
-//			writeErrorJSON(w, customErr.PermissionDenied{})
-//			return
-//		}
-//
-//		claims := token.Claims.(jwt.MapClaims)
-//		if account.Number != int64(claims["accountNumber"].(float64)) {
-//			writeErrorJSON(w, customErr.PermissionDenied{})
-//			return
-//		}
-//
-//		handlerFunc(w, r)
-//	}
-//}

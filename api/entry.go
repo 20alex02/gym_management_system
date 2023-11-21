@@ -39,12 +39,6 @@ func (s *Server) handleCreateEntry(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *Server) handleDeleteEntry(w http.ResponseWriter, r *http.Request) error {
-	_, ok := r.Context().Value("claims").(*Claims)
-	if !ok {
-		log.Println("cannot get claims")
-		return errors.PermissionDenied{}
-	}
-
 	entryId, err := getId(r, "entryId")
 	if err != nil {
 		return err
@@ -53,16 +47,10 @@ func (s *Server) handleDeleteEntry(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 func (s *Server) handleGetEventEntries(w http.ResponseWriter, r *http.Request) error {
-	_, ok := r.Context().Value("claims").(*Claims)
-	if !ok {
-		log.Println("cannot get claims")
-		return errors.PermissionDenied{}
-	}
-
 	eventId, err := getId(r, "eventId")
 	if err != nil {
 		return err

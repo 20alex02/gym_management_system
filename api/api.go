@@ -58,19 +58,35 @@ func (s *Server) Run() {
 	authRouter.HandleFunc("/entries/{entryId}", makeHTTPHandleFunc(s.handleDeleteEntry)).Methods("DELETE")
 
 	// Admin Endpoints with JWT authentication
-	//adminRouter := apiRouter.PathPrefix("/admin").Subrouter()
-	//adminRouter.Use(withJWTAuth)
+	adminRouter := apiRouter.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(withJWTAuth)
 
-	//adminRouter.HandleFunc("/events", makeHTTPHandleFunc(handleCreateEvent)).Methods("POST")
-	//adminRouter.HandleFunc("/events/{eventId}", makeHTTPHandleFunc(handleDeleteEvent)).Methods("DELETE")
-	//adminRouter.HandleFunc("/memberships", makeHTTPHandleFunc(handleCreateMembership)).Methods("POST")
-	//adminRouter.HandleFunc("/memberships/{membershipId}", makeHTTPHandleFunc(handleDeleteMembership)).Methods("DELETE")
+	adminRouter.HandleFunc("/events", makeHTTPHandleFunc(s.handleCreateEvent)).Methods("POST")
+	adminRouter.HandleFunc("/events/{eventId}", makeHTTPHandleFunc(s.handleDeleteEvent)).Methods("DELETE")
+	adminRouter.HandleFunc("/memberships", makeHTTPHandleFunc(s.handleCreateMembership)).Methods("POST")
+	adminRouter.HandleFunc("/memberships/{membershipId}", makeHTTPHandleFunc(s.handleDeleteMembership)).Methods("DELETE")
 
 	log.Println("JSON API server running on port: ", s.listenAddr)
 
 	if err := http.ListenAndServe(s.listenAddr, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := f(w, r); err != nil {
+			log.Println("nested function failed")
+			writeErrorJSON(w, err)
+		}
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) error {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	return json.NewEncoder(w).Encode(v)
 }
 
 func writeErrorJSON(w http.ResponseWriter, e error) {
@@ -97,22 +113,6 @@ func writeErrorJSON(w http.ResponseWriter, e error) {
 	if err != nil {
 		log.Println(err)
 	}
-}
-
-func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := f(w, r); err != nil {
-			log.Println("nested function failed")
-			writeErrorJSON(w, err)
-		}
-	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) error {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	return json.NewEncoder(w).Encode(v)
 }
 
 func getId(r *http.Request, key string) (int, error) {

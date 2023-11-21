@@ -17,13 +17,13 @@ func (s *PostgresStore) CreateAccountMembership(m *AccountMembership) (int, erro
 	defer commitOrRollback(tx, &err)
 
 	account := Account{}
-	err = checkRecord(tx, ACCOUNT, m.AccountId, &account)
+	err = getRecord(tx, ACCOUNT, m.AccountId, &account)
 	if err != nil {
 		return 0, err
 	}
 
 	membership := Membership{}
-	err = checkRecord(tx, MEMBERSHIP, m.MembershipId, &membership)
+	err = getRecord(tx, MEMBERSHIP, m.MembershipId, &membership)
 	if err != nil {
 		return 0, err
 	}

@@ -5,7 +5,7 @@ type MembershipRepository interface {
 	//GetAllMembershipsByAccountId(id int) (*[]Membership, error)
 	GetAllMemberships() (*[]Membership, error)
 	//GetMembershipById(id int) (*Membership, error)
-	//DeleteMembership(id int) error
+	DeleteMembership(id int) error
 }
 
 func (s *PostgresStore) CreateMembership(m *Membership) (int, error) {
@@ -70,7 +70,6 @@ func (s *PostgresStore) GetAllMemberships() (*[]Membership, error) {
 //	return membership, nil
 //}
 
-/*
 func (s *PostgresStore) DeleteMembership(id int) error {
 	tx, err := s.Db.Begin()
 	if err != nil {
@@ -78,7 +77,8 @@ func (s *PostgresStore) DeleteMembership(id int) error {
 	}
 	defer commitOrRollback(tx, &err)
 
-	err = checkRecord(tx, MEMBERSHIP, id)
+	membership := Membership{}
+	err = getRecord(tx, MEMBERSHIP, id, &membership)
 	if err != nil {
 		return err
 	}
@@ -86,4 +86,3 @@ func (s *PostgresStore) DeleteMembership(id int) error {
 	_, err = tx.Exec(query, id)
 	return err
 }
-*/

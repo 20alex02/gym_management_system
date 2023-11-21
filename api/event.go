@@ -1,20 +1,12 @@
 package api
 
 import (
+	"encoding/json"
 	"gym_management_system/db"
 	"gym_management_system/errors"
 	"log"
 	"net/http"
 )
-
-//func getWeekInterval(offset int) (from time.Time, to time.Time) {
-//	now := time.Now()
-//	daysToSubtract := int(now.Weekday()) + (offset * 7)
-//	startOfWeek := now.AddDate(0, 0, -daysToSubtract)
-//	endOfWeek := startOfWeek.AddDate(0, 0, 6)
-//
-//	return startOfWeek, endOfWeek
-//}
 
 func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
 	from, err := getTime(r, "from")
@@ -36,4 +28,41 @@ func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return writeJSON(w, http.StatusOK, map[string][]db.Event{"events": *events})
+}
+
+func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) error {
+	// todo validation
+	req := new(CreateEventRequest)
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+
+	event := db.Event{
+		Type:     req.Type,
+		Title:    req.Title,
+		Start:    req.Start,
+		End:      req.End,
+		Capacity: req.Capacity,
+		Price:    req.Price,
+	}
+	id, err := s.store.CreateEvent(&event)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]int{"createdId": id})
+}
+
+func (s *Server) handleDeleteEvent(w http.ResponseWriter, r *http.Request) error {
+	// todo validation
+	id, err := getId(r, "eventId")
+	if err != nil {
+		return err
+	}
+	err = s.store.DeleteEvent(id)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }

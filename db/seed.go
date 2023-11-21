@@ -2,6 +2,8 @@ package db
 
 import (
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
+	"os"
 	"time"
 )
 
@@ -13,6 +15,9 @@ func (s *PostgresStore) Seed() error {
 	}
 
 	if err = s.createEventType(); err != nil {
+		return err
+	}
+	if err = s.createRole(); err != nil {
 		return err
 	}
 	if err = s.createAccountTable(); err != nil {
@@ -67,22 +72,10 @@ func (s *PostgresStore) Seed() error {
 			return err
 		}
 	}
-
-	//accounts := []Account{
-	//	{1, "john", "doe", "12345", "jDoe@mail.com", 0, time.Now(), nil},
-	//	{2, "jack", "johnson", "ashfsaf", "jj@mail.com", 0, time.Now(), nil},
-	//	{3, "john", "jackson", "lengogn", "johnJ@mail.com", 0, time.Now(), nil},
-	//}
-	//for _, account := range accounts {
-	//	if _, err := s.CreateAccount(&account); err != nil {
-	//		return err
-	//	}
-	//}
-
-	//accountMembership := AccountMembership{1, 1, 3, time.Now(), time.Now().AddDate(0, 1, 0), 30, time.Now(), nil}
-	//if _, err = s.CreateAccountMembership(&accountMembership); err != nil {
-	//	return err
-	//}
+	err = s.createAdmin()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -94,6 +87,10 @@ func (s *PostgresStore) cleanup(tables []string) error {
 		}
 	}
 	_, err := s.Db.Exec(`drop type if exists event_type`)
+	if err != nil {
+		return err
+	}
+	_, err = s.Db.Exec(`drop type if exists role`)
 	return err
 }
 
@@ -105,6 +102,7 @@ func (s *PostgresStore) createAccountTable() error {
 		encrypted_password varchar(255),
 		email varchar(255) unique,
 		credit int,
+		role role default 'user',
 		created_at timestamp default current_timestamp,
 		deleted_at timestamp default null
 	)`
@@ -159,7 +157,6 @@ func (s *PostgresStore) createEntryTable() error {
 	return err
 }
 
-// TODO capacity and capacity_left
 func (s *PostgresStore) createEventTable() error {
 	query := `create table if not exists event (
 		id serial primary key,
@@ -184,5 +181,40 @@ func (s *PostgresStore) createEventType() error {
 		'all'
 	)`
 	_, err := s.Db.Exec(query)
+	return err
+}
+
+func (s *PostgresStore) createRole() error {
+	query := `create type role as enum (
+		'admin',
+		'user'
+	)`
+	_, err := s.Db.Exec(query)
+	return err
+}
+
+func (s *PostgresStore) createAdmin() error {
+	query := `insert into account (
+		first_name,
+		last_name, 
+		encrypted_password,
+		email,
+		credit,
+        role
+	) values ($1, $2, $3, $4, $5, $6) returning id`
+
+	pw, err := bcrypt.GenerateFromPassword([]byte(os.Getenv("ADMIN_PASSWORD")), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	var id int
+	err = s.Db.QueryRow(
+		query,
+		"dexter",
+		"morgan",
+		string(pw),
+		os.Getenv("ADMIN_EMAIL"),
+		0,
+		ADMIN).Scan(&id)
 	return err
 }

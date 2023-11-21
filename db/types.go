@@ -12,6 +12,13 @@ const (
 	ALL      EventType = "all"
 )
 
+type Role string
+
+const (
+	ADMIN Role = "admin"
+	USER  Role = "user"
+)
+
 type Table string
 
 const (
@@ -29,6 +36,7 @@ type Account struct {
 	EncryptedPassword string `json:"-"`
 	Email             string `json:"email"`
 	Credit            int    `json:"credit"`
+	Role              Role   `json:"-"`
 
 	CreatedAt time.Time  `json:"-"`
 	DeletedAt *time.Time `json:"-"`

@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/golang-jwt/jwt/v4"
+	"gym_management_system/db"
 	"time"
 )
 
@@ -25,22 +26,28 @@ type CreateAccountMembershipRequest struct {
 }
 
 type CreateEntryRequest struct {
-	AccountMembershipId *int `json:"accountMembershipId,omitempty"`
+	AccountMembershipId *int `json:"accountMembershipId"`
+}
+
+type CreateEventRequest struct {
+	Type     db.EventType `json:"type"`
+	Title    string       `json:"title"`
+	Start    time.Time    `json:"start"`
+	End      time.Time    `json:"end"`
+	Capacity int          `json:"capacity"`
+	Price    int          `json:"price"`
+}
+
+type CreateMembershipRequest struct {
+	Type         db.EventType `json:"type"`
+	DurationDays int          `json:"durationDays"`
+	Entries      int          `json:"entries"`
+	Price        int          `json:"price"`
 }
 
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-type LoginResponse struct {
-	Id    int    `json:"id"`
-	Token string `json:"token"`
-}
-
-type GetEventsRequest struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
 }
 
 type Claims struct {

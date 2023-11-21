@@ -23,12 +23,12 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 	defer commitOrRollback(tx, &err)
 
 	event := Event{}
-	err = checkRecord(tx, EVENT, e.EventId, &event)
+	err = getRecord(tx, EVENT, e.EventId, &event)
 	if err != nil {
 		return 0, err
 	}
 	account := Account{}
-	err = checkRecord(tx, ACCOUNT, e.AccountId, &account)
+	err = getRecord(tx, ACCOUNT, e.AccountId, &account)
 	if err != nil {
 		return 0, err
 	}
@@ -58,14 +58,14 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			err = customErr.InsufficientResources{}
 			return 0, err
 		}
-		query := `update account set credit = $1 where id = $2`
+		query = `update account set credit = $1 where id = $2`
 		_, err = tx.Exec(query, account.Credit-event.Price, account.Id)
 		if err != nil {
 			return 0, err
 		}
 	} else {
 		accountMembership := AccountMembership{}
-		err = checkRecord(tx, ACCOUNT_MEMBERSHIP, *e.AccountMembershipId, &accountMembership)
+		err = getRecord(tx, ACCOUNT_MEMBERSHIP, *e.AccountMembershipId, &accountMembership)
 		if err != nil {
 			return 0, err
 		}
@@ -78,16 +78,17 @@ func (s *PostgresStore) CreateEntry(e *Entry) (int, error) {
 			return 0, err
 		}
 
-		membership := Membership{}
-		err = checkRecord(tx, MEMBERSHIP, accountMembership.MembershipId, &membership)
+		var eventType EventType
+		query = `select type from membership where id = $1`
+		err = tx.QueryRow(query, accountMembership.MembershipId).Scan(&eventType)
 		if err != nil {
 			return 0, err
 		}
-		if event.Type != membership.Type && membership.Type != ALL {
+		if eventType != event.Type && eventType != ALL {
 			err = customErr.InvalidRequest{Message: "invalid membership type"}
 			return 0, err
 		}
-		query := `update account_membership set entries = $1 where id = $2`
+		query = `update account_membership set entries = $1 where id = $2`
 		_, err = tx.Exec(query, accountMembership.Entries-1, accountMembership.Id)
 		if err != nil {
 			return 0, err
@@ -161,12 +162,12 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 	defer commitOrRollback(tx, &err)
 
 	entry := Entry{}
-	err = checkRecord(tx, ENTRY, id, &entry)
+	err = getRecord(tx, ENTRY, id, &entry)
 	if err != nil {
 		return err
 	}
 	event := Event{}
-	err = checkRecord(tx, EVENT, entry.EventId, &event)
+	err = getRecord(tx, EVENT, entry.EventId, &event)
 	if err != nil {
 		return err
 	}
@@ -179,12 +180,12 @@ func (s *PostgresStore) DeleteEntry(id int) error {
 		return err
 	}
 	account := Account{}
-	err = checkRecord(tx, ACCOUNT, entry.AccountId, &account)
+	err = getRecord(tx, ACCOUNT, entry.AccountId, &account)
 	if err != nil {
 		return err
 	}
 	membership := AccountMembership{}
-	err = checkRecord(tx, ACCOUNT_MEMBERSHIP, entry.AccountId, &membership)
+	err = getRecord(tx, ACCOUNT_MEMBERSHIP, entry.AccountId, &membership)
 	if err != nil {
 		return err
 	}

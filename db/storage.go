@@ -141,7 +141,7 @@ func commitOrRollback(tx *sql.Tx, err *error) {
 	}
 }
 
-func checkRecord[T any](tx *sql.Tx, table Table, id int, record *T) error {
+func getRecord[T any](tx *sql.Tx, table Table, id int, record *T) error {
 	query := fmt.Sprintf(`select * from %s where id = $1`, table)
 	row := tx.QueryRow(query, id)
 	if err := scanRow(row, record); err != nil {

@@ -99,7 +99,7 @@ func (s *PostgresStore) UpdateAccount(a *Account) error {
 	defer commitOrRollback(tx, &err)
 
 	account := Account{}
-	err = checkRecord(tx, ACCOUNT, a.Id, &account)
+	err = getRecord(tx, ACCOUNT, a.Id, &account)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	defer commitOrRollback(tx, &err)
 
 	account := Account{}
-	err = checkRecord(tx, ACCOUNT, id, &account)
+	err = getRecord(tx, ACCOUNT, id, &account)
 	if err != nil {
 		return err
 	}

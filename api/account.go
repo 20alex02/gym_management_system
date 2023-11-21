@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"gym_management_system/db"
 	"gym_management_system/errors"
 	"log"
 	"net/http"
@@ -15,11 +16,17 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	account, err := newAccount(req.FirstName, req.LastName, req.Email, req.Password)
+	pw, err := HashPassword(req.Password)
+	account := db.Account{
+		FirstName:         req.FirstName,
+		LastName:          req.LastName,
+		EncryptedPassword: pw,
+		Email:             req.Email,
+	}
 	if err != nil {
 		return err
 	}
-	id, err := s.store.CreateAccount(account)
+	id, err := s.store.CreateAccount(&account)
 	if err != nil {
 		return err
 	}
@@ -54,7 +61,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 		Expires: expTime,
 	})
 
-	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, _ *http.Request) error {
@@ -62,7 +69,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, _ *http.Request) error {
 		Name:    "token",
 		Expires: time.Now(),
 	})
-	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 func (s *Server) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
@@ -89,7 +96,7 @@ func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) error {
@@ -103,18 +110,23 @@ func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) err
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
 	}
-	account, err := newAccount(req.FirstName, req.LastName, req.Email, req.Password)
+	pw, err := HashPassword(req.Password)
 	if err != nil {
 		return err
 	}
-	account.Id = claims.Id
-	account.Credit = req.Credit
-
-	if err := s.store.UpdateAccount(account); err != nil {
+	account := db.Account{
+		Id:                claims.Id,
+		FirstName:         req.FirstName,
+		LastName:          req.LastName,
+		EncryptedPassword: pw,
+		Email:             req.Email,
+		Credit:            req.Credit,
+	}
+	if err := s.store.UpdateAccount(&account); err != nil {
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string]string{"message": "success"})
+	return writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 //func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) error {
