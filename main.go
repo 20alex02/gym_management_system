@@ -37,11 +37,25 @@ func main() {
 
 	if *seed {
 		fmt.Println("seeding the database")
-		if errors := store.Seed(); errors != nil {
-			log.Fatal(errors)
+		if err = store.Seed(); err != nil {
+			log.Fatal(err)
 		}
 	}
 
-	server := api.NewServer(":3000", store)
+	validator, err := api.NewCustomValidator()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//v := validator.New()
+	//if err := v.RegisterValidation("password", api.PasswordValidation); err != nil {
+	//	log.Fatal(err)
+	//}
+	//if err := v.RegisterValidation("gteCurrentDay", api.GreaterThanOrEqualCurrentDayValidation); err != nil {
+	//	log.Fatal(err)
+	//}
+	//if err := v.RegisterValidation("gtNow", api.GreaterThanNowValidation); err != nil {
+	//	log.Fatal(err)
+	//}
+	server := api.NewServer(":3000", store, validator)
 	server.Run()
 }

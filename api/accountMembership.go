@@ -15,12 +15,13 @@ func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Re
 		return errors.PermissionDenied{}
 	}
 
-	// TODO validation, valid from < today
 	req := new(CreateAccountMembershipRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
 	}
-
+	if err := s.validator.Validate(req); err != nil {
+		return err
+	}
 	membershipId, err := getId(r, "membershipId")
 	if err != nil {
 		return err

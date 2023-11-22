@@ -16,9 +16,11 @@ func (s *Server) handleGetMemberships(w http.ResponseWriter, _ *http.Request) er
 }
 
 func (s *Server) handleCreateMembership(w http.ResponseWriter, r *http.Request) error {
-	// todo validation
 	req := new(CreateMembershipRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+	if err := s.validator.Validate(req); err != nil {
 		return err
 	}
 	membership := db.Membership{

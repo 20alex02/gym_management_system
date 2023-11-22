@@ -82,16 +82,6 @@ func (s *PostgresStore) GetAccountEvents(accountId int) (*[]EventWithEntryId, er
 	events := &[]EventWithEntryId{}
 	err = scanRows(rows, events)
 	return events, err
-	//query := `select * from entry where account_id = $1 and deleted_at is null`
-	//rows, err := s.Db.Query(query, accountId)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//entries := &[]Entry{}
-	//if err := scanRows(rows, entries); err != nil {
-	//	return nil, err
-	//}
-	//return entries, nil
 }
 
 func (s *PostgresStore) DeleteEvent(id int) error {

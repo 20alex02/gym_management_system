@@ -15,6 +15,7 @@ import (
 type Server struct {
 	listenAddr string
 	store      db.Storage
+	validator  *CustomValidator
 }
 
 type apiFunc func(http.ResponseWriter, *http.Request) error
@@ -23,10 +24,11 @@ type Error struct {
 	Error string `json:"error"`
 }
 
-func NewServer(listenAddr string, store db.Storage) *Server {
+func NewServer(listenAddr string, store db.Storage, validator *CustomValidator) *Server {
 	return &Server{
 		listenAddr: listenAddr,
 		store:      store,
+		validator:  validator,
 	}
 }
 

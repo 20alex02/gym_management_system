@@ -10,12 +10,14 @@ import (
 )
 
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	// TODO validation --> names have to be 3-30 characters long, email has to be in valid format, password has to contain at least 6 characters of which at least one is lowercase, uppercase, number, special character
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		log.Println("decoder failed")
 		return err
 	}
-
+	if err := s.validator.Validate(req); err != nil {
+		return err
+	}
 	pw, err := HashPassword(req.Password)
 	account := db.Account{
 		FirstName:         req.FirstName,
@@ -37,6 +39,9 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) err
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	req := new(LoginRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+	if err := s.validator.Validate(req); err != nil {
 		return err
 	}
 
@@ -113,6 +118,9 @@ func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) err
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
 	}
+	if err := s.validator.Validate(req); err != nil {
+		return err
+	}
 	pw, err := HashPassword(req.Password)
 	if err != nil {
 		return err
@@ -123,7 +131,7 @@ func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) err
 		LastName:          req.LastName,
 		EncryptedPassword: pw,
 		Email:             req.Email,
-		Credit:            req.Credit,
+		Credit:            req.RechargedCredit,
 	}
 	if err := s.store.UpdateAccount(&account); err != nil {
 		return err

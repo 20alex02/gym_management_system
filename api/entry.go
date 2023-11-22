@@ -21,7 +21,10 @@ func (s *Server) handleCreateEntry(w http.ResponseWriter, r *http.Request) error
 	}
 
 	req := new(CreateEntryRequest)
-	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+	if err = s.validator.Validate(req); err != nil {
 		return err
 	}
 

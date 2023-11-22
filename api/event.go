@@ -31,9 +31,11 @@ func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) error {
-	// todo validation
 	req := new(CreateEventRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err
+	}
+	if err := s.validator.Validate(req); err != nil {
 		return err
 	}
 
