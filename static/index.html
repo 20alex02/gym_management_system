@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Page</title>
+</head>
+<body>
+<h2>Welcome to the Home Page</h2>
+
+<!-- Buttons to redirect to different pages -->
+<button onclick="redirectTo('/api/signup')">Signup</button>
+<button onclick="redirectTo('/api/login')">Login</button>
+<button onclick="redirectToEvents()">Events</button>
+<button onclick="redirectTo('/api/memberships')">Memberships</button>
+
+<script>
+  // Function to redirect to the specified page
+  function redirectTo(page) {
+    window.location.href = page;
+  }
+
+  function redirectToEvents() {
+    var currentDate = new Date();
+    var currentDay = currentDate.getDay();
+    var from = new Date(currentDate);
+    from.setHours(0, 0, 0, 0); // Set to 00:00:00
+    from.setDate(from.getDate() - currentDay + (currentDay === 0 ? -6 : 1)); // Set to the Monday of the current week
+
+    var to = new Date(from);
+    to.setHours(23, 59, 59, 999); // Set to 23:59:59.999
+    to.setDate(to.getDate() + 6); // Set to the Sunday of the current week
+
+
+    var formattedFrom = from.toISOString();
+    var formattedTo = to.toISOString();
+
+    // Update the URL with the 'from' and 'to' parameters
+    // Reload the page with the updated URL
+    window.location.href = '/api/events' + `?from=${formattedFrom}&to=${formattedTo}`;
+  }
+</script>
+</body>
+</html>

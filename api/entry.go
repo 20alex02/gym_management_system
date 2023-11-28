@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gym_management_system/db"
 	"gym_management_system/errors"
+	"html/template"
 	"log"
 	"net/http"
 )
@@ -67,8 +68,13 @@ func (s *Server) handleGetEventEntries(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
+	tmpl, err := template.New("event_entries.html").ParseFiles("static/event_entries.html")
+	if err != nil {
+		return err
+	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.EventEntry{"entries": *entries})
+	return tmpl.Execute(w, entries)
+	//return writeJSON(w, http.StatusOK, map[string][]db.EventEntry{"entries": *entries})
 }
 
 func (s *Server) handleGetAccountEvents(w http.ResponseWriter, r *http.Request) error {
@@ -81,6 +87,11 @@ func (s *Server) handleGetAccountEvents(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
+	tmpl, err := template.New("my_events.html").ParseFiles("static/my_events.html")
+	if err != nil {
+		return err
+	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.EventWithEntryId{"events": *events})
+	return tmpl.Execute(w, events)
+	//return writeJSON(w, http.StatusOK, map[string][]db.EventWithEntryId{"events": *events})
 }

@@ -36,25 +36,22 @@ func (s *PostgresStore) Seed() error {
 		return err
 	}
 
-	hours := []int{9, 12, 18}
 	now := time.Now()
 	startOfWeek := now.AddDate(0, 0, 1-int(now.Weekday()))
 	var events []Event
-	for i := 0; i < 7; i++ {
+	for i := -3; i < 16; i++ {
 		dayStart := startOfWeek.AddDate(0, 0, i)
-		for _, hour := range hours {
-			startTime := time.Date(dayStart.Year(), dayStart.Month(), dayStart.Day(), hour, 0, 0, 0, time.Local)
-			endTime := startTime.Add(time.Hour)
-			event := Event{
-				Type:     OPEN_GYM,
-				Title:    fmt.Sprintf("Event at %s", startTime),
-				Start:    startTime,
-				End:      endTime,
-				Capacity: 10,
-				Price:    100,
-			}
-			events = append(events, event)
+		startTime := time.Date(dayStart.Year(), dayStart.Month(), dayStart.Day(), 16, 0, 0, 0, time.Local)
+		endTime := startTime.Add(time.Hour)
+		event := Event{
+			Type:     OPEN_GYM,
+			Title:    fmt.Sprintf("Event at %s", startTime),
+			Start:    startTime,
+			End:      endTime,
+			Capacity: 10,
+			Price:    100,
 		}
+		events = append(events, event)
 	}
 	for _, event := range events {
 		if _, err = s.CreateEvent(&event); err != nil {

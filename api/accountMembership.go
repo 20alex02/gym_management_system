@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"gym_management_system/db"
 	"gym_management_system/errors"
+	"html/template"
 	"log"
 	"net/http"
+	"time"
 )
 
 func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Request) error {
@@ -17,8 +19,10 @@ func (s *Server) handleCreateAccountMembership(w http.ResponseWriter, r *http.Re
 
 	req := new(CreateAccountMembershipRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+		return errors.InvalidRequest{Message: err.Error()}
 	}
+	log.Println(req.ValidFrom)
+	log.Println(time.Now())
 	if err := s.validator.Validate(req); err != nil {
 		return err
 	}
@@ -50,5 +54,12 @@ func (s *Server) handleGetAccountMemberships(w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, map[string][]db.AccountMembershipWithType{"memberships": *memberships})
+	tmpl, err := template.New("my_memberships.html").ParseFiles("static/my_memberships.html")
+	if err != nil {
+		return err
+	}
+
+	// Execute the template and write the result to the response
+	return tmpl.Execute(w, memberships)
+	//return writeJSON(w, http.StatusOK, map[string][]db.AccountMembershipWithType{"memberships": *memberships})
 }

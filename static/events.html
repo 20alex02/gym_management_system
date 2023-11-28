@@ -1,0 +1,89 @@
+<!-- static/memberships.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memberships</title>
+</head>
+<body>
+<h2>Events</h2>
+<div>
+    <button onclick="getEvents('prev')">Previous Week</button>
+    <button onclick="getEvents('next')">Next Week</button>
+</div>
+<ul>
+    {{range .}}
+    <li>
+        <p><strong>ID:</strong> {{.Id}}</p>
+        <p><strong>Type:</strong> {{.Type}}</p>
+        <p><strong>Title:</strong> {{.Title}}</p>
+        <p><strong>Start:</strong> {{.Start}}</p>
+        <p><strong>End:</strong> {{.End}}</p>
+        <p><strong>Participants:</strong> {{.Participants}}</p>
+        <p><strong>Capacity:</strong> {{.Capacity}}</p>
+        <p><strong>Price:</strong> {{.Price}}</p>
+        <button onclick="entries({{.Id}})">Entries</button>
+        <button onclick="register({{.Id}})">Register</button>
+        <hr>
+    </li>
+    {{end}}
+</ul>
+<script>
+    function getEvents(direction) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var fromParam = urlParams.get('from');
+        var toParam = urlParams.get('to');
+
+        if (!fromParam || !toParam) {
+            // Handle missing or invalid parameters
+            console.error('Invalid or missing date parameters');
+            return;
+        }
+
+        var from = new Date(fromParam);
+        var to = new Date(toParam);
+
+        // Calculate the 'from' and 'to' parameters based on the direction
+        if (direction === 'next') {
+            from.setDate(from.getDate() + 7);
+            to.setDate(to.getDate() + 7);
+        } else if (direction === 'prev') {
+            from.setDate(from.getDate() - 7);
+            to.setDate(to.getDate() - 7);
+        }
+
+        var formattedFrom = from.toISOString();
+        var formattedTo = to.toISOString();
+
+        window.location.href = window.location.pathname + `?from=${formattedFrom}&to=${formattedTo}`;
+    }
+    function entries(eventId) {
+        // Redirect to the entry endpoint for the selected event
+        window.location.href = `/api/events/${eventId}/entries`;
+    }
+    function register(eventId) {
+        // Send a POST request to register for the event
+        fetch(`/api/events/${eventId}/entries`, {
+            method: 'POST',
+            credentials: 'include', // Include credentials (cookies) in the request
+            body: JSON.stringify({})
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Optionally, provide feedback to the user
+                console.log('Registered successfully');
+                // Reload the page to update the entries
+                window.location.href = `/api/account/events`;
+            })
+            .catch(error => {
+                // Handle error
+                console.error('Error during registration:', error);
+            });
+    }
+</script>
+</body>
+</html>

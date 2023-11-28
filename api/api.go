@@ -35,12 +35,24 @@ func NewServer(listenAddr string, store db.Storage, validator *CustomValidator) 
 func (s *Server) Run() {
 	r := mux.NewRouter()
 
+	staticDir := "/static/"
+	r.PathPrefix(staticDir).Handler(http.StripPrefix(staticDir, http.FileServer(http.Dir("static"))))
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/index.html")
+	})
+
 	// Define the API router
 	apiRouter := r.PathPrefix("/api").Subrouter()
 
 	// Public Endpoints
-	apiRouter.HandleFunc("/sign-up", makeHTTPHandleFunc(s.handleCreateAccount)).Methods("POST")
+	apiRouter.HandleFunc("/signup", makeHTTPHandleFunc(s.handleCreateAccount)).Methods("POST")
+	apiRouter.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/signup.html")
+	}).Methods("GET")
 	apiRouter.HandleFunc("/login", makeHTTPHandleFunc(s.handleLogin)).Methods("POST")
+	apiRouter.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/login.html")
+	}).Methods("GET")
 	apiRouter.HandleFunc("/logout", makeHTTPHandleFunc(s.handleLogout)).Methods("POST")
 	apiRouter.HandleFunc("/events", makeHTTPHandleFunc(s.handleGetEvents)).Methods("GET")
 	apiRouter.HandleFunc("/events/{eventId}/entries", makeHTTPHandleFunc(s.handleGetEventEntries)).Methods("GET")

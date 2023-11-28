@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gym_management_system/db"
 	"gym_management_system/errors"
+	"html/template"
 	"log"
 	"net/http"
 	"time"
@@ -12,8 +13,7 @@ import (
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		log.Println("decoder failed")
-		return err
+		return errors.InvalidRequest{Message: err.Error()}
 	}
 	if err := s.validator.Validate(req); err != nil {
 		return err
@@ -39,7 +39,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) err
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	req := new(LoginRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+		return errors.InvalidRequest{Message: err.Error()}
 	}
 	if err := s.validator.Validate(req); err != nil {
 		return err
@@ -91,7 +91,14 @@ func (s *Server) handleGetAccount(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 
-	return writeJSON(w, http.StatusOK, account)
+	// Parse the HTML template
+	tmpl, err := template.New("account.html").ParseFiles("static/account.html")
+	if err != nil {
+		return err
+	}
+
+	// Execute the template and write the result to the response
+	return tmpl.Execute(w, account)
 }
 
 func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
@@ -116,24 +123,46 @@ func (s *Server) handleUpdateAccount(w http.ResponseWriter, r *http.Request) err
 
 	req := new(UpdateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+		return errors.InvalidRequest{Message: err.Error()}
 	}
+	log.Println(req)
 	if err := s.validator.Validate(req); err != nil {
 		return err
 	}
-	pw, err := HashPassword(req.Password)
+
+	acc, err := s.store.GetAccountById(claims.Id)
 	if err != nil {
 		return err
 	}
-	account := db.Account{
-		Id:                claims.Id,
-		FirstName:         req.FirstName,
-		LastName:          req.LastName,
-		EncryptedPassword: pw,
-		Email:             req.Email,
-		Credit:            req.RechargedCredit,
+
+	if req.OldPassword != nil && !validPassword(*req.OldPassword, acc.EncryptedPassword) {
+		return errors.InvalidRequest{Message: "incorrect password"}
 	}
-	if err := s.store.UpdateAccount(&account); err != nil {
+
+	if req.FirstName != nil {
+		acc.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		acc.LastName = *req.LastName
+	}
+	if req.Email != nil {
+		acc.Email = *req.Email
+	}
+	if req.RechargedCredit != nil {
+		log.Println(req.RechargedCredit)
+		log.Println(acc.Credit)
+		acc.Credit += *req.RechargedCredit
+	}
+	if req.NewPassword != nil {
+		pw, err := HashPassword(*req.NewPassword)
+		if err != nil {
+			return err
+		}
+		acc.EncryptedPassword = pw
+	}
+
+	log.Println(acc)
+	if err = s.store.UpdateAccount(acc); err != nil {
 		return err
 	}
 

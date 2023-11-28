@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gym_management_system/db"
 	"gym_management_system/errors"
+	"html/template"
 	"log"
 	"net/http"
 )
@@ -26,14 +27,18 @@ func (s *Server) handleGetEvents(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-
-	return writeJSON(w, http.StatusOK, map[string][]db.Event{"events": *events})
+	tmpl, err := template.New("events.html").ParseFiles("static/events.html")
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(w, events)
+	//return writeJSON(w, http.StatusOK, map[string][]db.Event{"events": *events})
 }
 
 func (s *Server) handleCreateEvent(w http.ResponseWriter, r *http.Request) error {
 	req := new(CreateEventRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+		return errors.InvalidRequest{Message: err.Error()}
 	}
 	if err := s.validator.Validate(req); err != nil {
 		return err

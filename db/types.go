@@ -30,7 +30,7 @@ const (
 )
 
 type Account struct {
-	Id                int    `json:"id"`
+	Id                int    `json:"-"`
 	FirstName         string `json:"firstName"`
 	LastName          string `json:"lastName"`
 	EncryptedPassword string `json:"-"`

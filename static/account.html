@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Page</title>
+</head>
+<body>
+<button onclick="redirectToEvents()">Events</button>
+<button onclick="redirectTo('/api/memberships')">Memberships</button>
+<button onclick="redirectTo('/api/account/events')">My entries</button>
+<button onclick="redirectTo('/api/account/memberships')">My memberships</button>
+<h2>Account Information</h2>
+<div id="accountInfo">
+    <!-- Displayed user information -->
+    <p><strong>First Name:</strong> {{.FirstName}}</p>
+    <p><strong>Last Name:</strong> {{.LastName}}</p>
+    <p><strong>Email:</strong> {{.Email}}</p>
+    <p><strong>Credit:</strong> {{.Credit}}</p>
+</div>
+
+<!-- Logout Button -->
+<button type="button" onclick="logout()">Logout</button>
+
+<!-- Delete Account Button -->
+<button type="button" onclick="deleteAccount()">Delete Account</button>
+
+<!-- Update Account Form -->
+<h3>Update Account</h3>
+<form id="updateForm">
+    <label for="updateFirstName">First Name:</label>
+    <input type="text" id="updateFirstName" name="updateFirstName"><br>
+
+    <label for="updateLastName">Last Name:</label>
+    <input type="text" id="updateLastName" name="updateLastName"><br>
+
+    <label for="updateEmail">Email:</label>
+    <input type="email" id="updateEmail" name="updateEmail"><br>
+
+    <label for="updateOldPassword">Old password:</label>
+    <input type="password" id="updateOldPassword" name="updateOldPassword"><br>
+
+    <label for="updateNewPassword">New password:</label>
+    <input type="password" id="updateNewPassword" name="updateNewPassword"><br>
+
+    <label for="updateCredit">Add credit:</label>
+    <input type="text" id="updateCredit" name="updateCredit"><br>
+
+    <button type="button" onclick="updateAccount()">Update</button>
+</form>
+
+<script>
+    // Function to logout
+    function logout() {
+        fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include' // Include credentials (cookies) in the request
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Redirect to index page on successful logout
+                window.location.href = '/';
+            })
+            .catch(error => {
+                // Handle error
+                console.error('Error during logout:', error);
+            });
+    }
+
+    // Function to delete account
+    function deleteAccount() {
+        fetch('/api/account', {
+            method: 'DELETE',
+            credentials: 'include' // Include credentials (cookies) in the request
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Redirect to index page on successful account deletion
+                window.location.href = '/';
+            })
+            .catch(error => {
+                // Handle error
+                console.error('Error during account deletion:', error);
+            });
+    }
+
+    // Function to update account
+    function updateAccount() {
+        var updateFirstName = document.getElementById("updateFirstName").value;
+        var updateLastName = document.getElementById("updateLastName").value;
+        var updateEmail = document.getElementById("updateEmail").value;
+        var updateOldPassword = document.getElementById("updateOldPassword").value;
+        var updateNewPassword = document.getElementById("updateNewPassword").value;
+        var updateCredit = document.getElementById("updateCredit").value;
+
+        var data = {};
+
+        // Add fields to the data object only if they are not empty
+        if (updateFirstName !== "") {
+            data.firstName = updateFirstName;
+        }
+        if (updateLastName !== "") {
+            data.lastName = updateLastName;
+        }
+        if (updateEmail !== "") {
+            data.email = updateEmail;
+        }
+        if (updateOldPassword !== "") {
+            data.oldPassword = updateOldPassword;
+        }
+        if (updateNewPassword !== "") {
+            data.newPassword = updateNewPassword;
+        }
+        if (updateCredit !== "") {
+            data.rechargedCredit = parseInt(updateCredit, 10);
+        }
+
+        fetch('/api/account', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data),
+            credentials: 'include' // Include credentials (cookies) in the request
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                window.location.reload();
+                // Optionally, provide feedback to the user
+                console.log('Account updated successfully');
+            })
+            .catch(error => {
+                // Handle error
+                console.error('Error during account update:', error);
+            });
+    }
+
+    function redirectTo(page) {
+        window.location.href = page;
+    }
+
+    function redirectToEvents() {
+        var currentDate = new Date();
+        var currentDay = currentDate.getDay();
+        var from = new Date(currentDate);
+        from.setHours(0, 0, 0, 0); // Set to 00:00:00
+        from.setDate(from.getDate() - currentDay + (currentDay === 0 ? -6 : 1)); // Set to the Monday of the current week
+
+        var to = new Date(from);
+        to.setHours(23, 59, 59, 999); // Set to 23:59:59.999
+        to.setDate(to.getDate() + 6); // Set to the Sunday of the current week
+
+        var formattedFrom = from.toISOString();
+        var formattedTo = to.toISOString();
+
+        // Update the URL with the 'from' and 'to' parameters
+        // Reload the page with the updated URL
+        window.location.href = '/api/events' + `?from=${formattedFrom}&to=${formattedTo}`;
+    }
+</script>
+</body>
+</html>

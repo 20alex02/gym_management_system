@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"gym_management_system/errors"
+	"reflect"
 	"strings"
 	"time"
 	"unicode"
@@ -58,6 +59,8 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 				validationErrors = append(validationErrors, fmt.Sprintf("%s must be greater than or equal to start of current day", field))
 			case "password":
 				validationErrors = append(validationErrors, fmt.Sprintf("%s must contain number, lower case, upper case and special character", field))
+			case "required_with":
+				validationErrors = append(validationErrors, fmt.Sprintf("%s is required with %s", field, e.Param()))
 			default:
 				validationErrors = append(validationErrors, tag)
 			}
@@ -65,6 +68,19 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 		return errors.InvalidRequest{Message: "validation error: " + strings.Join(validationErrors, "; ")}
 	}
 	return nil
+}
+
+func IsEmpty(updateRequest *UpdateAccountRequest) bool {
+	value := reflect.ValueOf(*updateRequest)
+
+	for i := 0; i < value.NumField(); i++ {
+		fieldValue := value.Field(i).Interface()
+		if fieldValue != nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 func PasswordValidation(fl validator.FieldLevel) bool {

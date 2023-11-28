@@ -163,35 +163,35 @@ func (s *PostgresStore) DeleteEntry(id, accountId int) error {
 		return err
 	}
 	account := Account{}
-	err = getRecord(tx, ACCOUNT, entry.AccountId, &account)
-	if err != nil {
-		return err
-	}
-	membership := AccountMembership{}
-	err = getRecord(tx, ACCOUNT_MEMBERSHIP, entry.AccountId, &membership)
+	err = getRecord(tx, ACCOUNT, accountId, &account)
 	if err != nil {
 		return err
 	}
 
 	query := `update event set participants = $1 where id = $2`
-	_, err = s.Db.Exec(query, event.Participants-1, event.Id)
+	_, err = tx.Exec(query, event.Participants-1, event.Id)
 	if err != nil {
 		return err
 	}
 	if entry.AccountMembershipId == nil {
 		query = `update account set credit = $1 where id = $2`
-		_, err = s.Db.Exec(query, account.Credit+event.Price, account.Id)
+		_, err = tx.Exec(query, account.Credit+event.Price, account.Id)
 		if err != nil {
 			return err
 		}
 	} else {
+		membership := AccountMembership{}
+		err = getRecord(tx, ACCOUNT_MEMBERSHIP, *entry.AccountMembershipId, &membership)
+		if err != nil {
+			return err
+		}
 		query = `update account_membership set entries = $1 where id = $2`
-		_, err = s.Db.Exec(query, membership.Entries+1, membership.Id)
+		_, err = tx.Exec(query, membership.Entries+1, membership.Id)
 		if err != nil {
 			return err
 		}
 	}
 	query = `update entry set deleted_at = current_timestamp where id = $1 and deleted_at is null`
-	_, err = s.Db.Exec(query, id)
+	_, err = tx.Exec(query, id)
 	return err
 }

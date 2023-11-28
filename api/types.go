@@ -14,11 +14,12 @@ type CreateAccountRequest struct {
 }
 
 type UpdateAccountRequest struct {
-	FirstName       string `json:"firstName" validate:"alpha,min=3,max=30"`
-	LastName        string `json:"lastName" validate:"alpha,min=3,max=30"`
-	Email           string `json:"email" validate:"email"`
-	Password        string `json:"password" validate:"password,min=6,max=30"`
-	RechargedCredit int    `json:"rechargedCredit" validate:"min=0"`
+	FirstName       *string `json:"firstName,omitempty" validate:"omitempty,alpha,min=3,max=30"`
+	LastName        *string `json:"lastName,omitempty" validate:"omitempty,alpha,min=3,max=30"`
+	Email           *string `json:"email,omitempty" validate:"omitempty,email"`
+	OldPassword     *string `json:"oldPassword,omitempty" validate:"omitempty,required_with=NewPassword"`
+	NewPassword     *string `json:"newPassword,omitempty" validate:"omitempty,required_with=OldPassword,password,min=6,max=30"`
+	RechargedCredit *int    `json:"rechargedCredit,omitempty" validate:"omitempty,min=0"`
 }
 
 type CreateAccountMembershipRequest struct {
