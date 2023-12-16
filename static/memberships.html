@@ -1,0 +1,73 @@
+<!-- static/memberships.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memberships</title>
+</head>
+<body>
+<h2>Memberships</h2>
+
+<!-- Display memberships -->
+<ul>
+  {{range .}}
+  <li>
+    <p><strong>ID:</strong> {{.Id}}</p>
+    <p><strong>Type:</strong> {{.Type}}</p>
+    <p><strong>Duration (Days):</strong> {{.DurationDays}}</p>
+    <p><strong>Entries:</strong> {{.Entries}}</p>
+    <p><strong>Price:</strong> {{.Price}}</p>
+    <label for="startDate">Start Date:</label>
+    <input type="date" id="startDate" name="startDate" required>
+    <button type="button" onclick="buyMembership({{.Id}})">Buy</button>
+    <hr>
+  </li>
+  {{end}}
+</ul>
+
+<!-- JavaScript to handle dynamic loading -->
+<script>
+  function buyMembership(membershipId) {
+    var startDateString = document.getElementById('startDate').value;
+
+    // Validate start date if needed
+
+    // Convert the string to a format expected by the server (e.g., "2006-01-02")
+    var startDate = new Date(startDateString);
+    var formattedDate = startDate.toISOString();
+
+    // Now, you can send the formatted date to the server
+    console.log("Formatted Date:", formattedDate);
+
+
+    // Prepare data for the purchase
+    var data = {
+      validFrom: formattedDate
+    };
+
+    // Send a POST request to purchase the membership
+    fetch(`/api/memberships/${membershipId}/purchase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data),
+      credentials: 'include'
+    })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              // Redirect to the account details page on successful purchase
+              window.location.href = '/api/account';
+            })
+            .catch(error => {
+              // Handle error
+              console.error('Error during membership purchase:', error);
+            });
+  }
+</script>
+</body>
+</html>

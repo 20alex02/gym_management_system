@@ -1,0 +1,85 @@
+PUBLIC ENDPOINTS:
+
+Create a new account:
+Endpoint: /api/accounts
+Method: POST
+Description: Allows a user to create a new account.
+
+Log in:
+Endpoint: /api/login
+Method: POST
+Description: Allows a user to log in.
+
+Log out:
+Endpoint: /api/logout
+Method: POST
+Description: Allows a user to log out.
+
+View events:
+Endpoint: /api/events
+Method: GET
+Description: Allows anyone (logged in or not) to view events.
+
+AUTH USER ENDPOINTS:
+
+Make entry to an event:
+Endpoint: /api/events/{eventID}/entries
+Method: POST
+Description: Allows a logged-in user to make an entry to a specific event.
+
+Delete entry from an event:
+Endpoint: /api/events/{eventID}/entries/{entryID}
+Method: DELETE
+Description: Allows a logged-in user to delete their entry from a specific event.
+
+View available memberships:
+Endpoint: /api/memberships
+Method: GET
+Description: Allows a logged-in user to view available memberships.
+
+Buy a new membership:
+Endpoint: /api/memberships/{membershipID}/purchase
+Method: POST
+Description: Allows a logged-in user to purchase a new membership.
+
+View account details:
+Endpoint: /api/account
+Method: GET
+Description: Allows a logged-in user to view their account details.
+
+Modify account details:
+Endpoint: /api/account
+Method: PUT
+Description: Allows a logged-in user to modify their account details.
+
+Delete account:
+Endpoint: /api/account
+Method: DELETE
+Description: Allows a logged-in user to delete their account.
+
+View purchased memberships:
+Endpoint: /api/account/memberships
+Method: GET
+Description: Allows a logged-in user to view the memberships they have purchased.
+
+ADMIN ENDPOINTS:
+
+Create a new event:
+Endpoint: /api/admin/events
+Method: POST
+Description: Allows an admin to create a new event.
+
+Delete an event:
+Endpoint: /api/admin/events/{eventID}
+Method: DELETE
+Description: Allows an admin to delete a specific event.
+
+Create a new available membership:
+Endpoint: /api/admin/memberships
+Method: POST
+Description: Allows an admin to create a new available membership.
+
+Delete an available membership:
+Endpoint: /api/admin/memberships/{membershipID}
+Method: DELETE
+Description: Allows an admin to delete a specific available membership.

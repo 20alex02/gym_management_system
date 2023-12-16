@@ -1,0 +1,27 @@
+<!-- static/memberships.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Memberships</title>
+</head>
+<body>
+<h2>Memberships</h2>
+
+<!-- Display memberships -->
+<ul>
+  {{range .}}
+  <li>
+    <p><strong>ID:</strong> {{.Id}}</p>
+    <p><strong>Valid from:</strong> {{.ValidFrom}}</p>
+    <p><strong>Valid to:</strong> {{.ValidTo}}</p>
+    <p><strong>Entries:</strong> {{.Entries}}</p>
+    <p><strong>Type:</strong> {{.Type}}</p>
+    <hr>
+  </li>
+  {{end}}
+</ul>
+</body>
+</html>
